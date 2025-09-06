@@ -179,7 +179,9 @@ const ChatNavbar: React.FC<ChatNavbarProps> = memo(({
   const [blobHovered, setBlobHovered] = useState(false)
   const [profileOpen, setProfileOpen] = useState(false)
 
-  const handleLogoClick = useCallback(() => { router.push('/') }, [router])
+  const handleLogoClick = useCallback(() => {
+    window.location.href = 'https://xleosweb.vercel.app';
+  }, []);
   const handleBotClick = useCallback(() => { onBotClick?.() }, [onBotClick])
 
   return (
