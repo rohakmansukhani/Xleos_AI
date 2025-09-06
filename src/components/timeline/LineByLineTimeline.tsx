@@ -14,12 +14,13 @@ interface Props {
   onSelectLine: (lineIdx: number) => void;
   onBackToInput: () => void;
 }
+// ...imports stay the same...
 
 export default function LineByLineTimeline({ session, onSelectLine, onBackToInput }: Props) {
   const [lineStatuses, setLineStatuses] = useState<Array<'processing' | 'ready' | 'completed'>>(session.lines.map(() => 'processing'));
 
   useEffect(() => {
-    let timeouts: NodeJS.Timeout[] = [];
+    const timeouts: NodeJS.Timeout[] = [];
     session.lines.forEach((_, idx) => {
       const t = setTimeout(() => {
         setLineStatuses(old =>
@@ -92,7 +93,7 @@ export default function LineByLineTimeline({ session, onSelectLine, onBackToInpu
                   {lineStatuses[idx] === 'processing' && 'Processing...'}
                   {lineStatuses[idx] === 'ready' && 'Ready – Review stock video suggestions'}
                   {lineStatuses[idx] === 'completed' && (
-                    <>Feedback saved: {session.feedback[idx]?.rating}&#11088; – "{session.feedback[idx]?.comment}"</>
+                    <>Feedback saved: {session.feedback[idx]?.rating}&#11088; – &quot;{session.feedback[idx]?.comment}&quot;</>
                   )}
                 </span>
               </div>

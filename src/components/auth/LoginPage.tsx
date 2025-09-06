@@ -53,7 +53,7 @@ export default function LoginPage({ onLogin, onSwitchToSignup, hideTitle }: Logi
           Sign In
         </button>
         <button type="button" onClick={onSwitchToSignup} className="mt-1 text-purple-300 text-xs underline">
-          Don't have an account? Sign up
+          Don&apos;t have an account? Sign up
         </button>
       </form>
     </>

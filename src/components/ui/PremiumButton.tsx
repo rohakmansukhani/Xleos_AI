@@ -6,7 +6,6 @@ import { motion, AnimatePresence, easeInOut } from "framer-motion"
 type ButtonVariant = 
   | 'primary' | 'secondary' | 'ghost' | 'gradient' | 'glass'
   | 'outline' | 'danger' | 'success'
-
 type ButtonSize = 'xs' | 'sm' | 'md' | 'lg' | 'xl'
 type ButtonAnimation = 
   | 'magnetic' | 'ripple' | 'glow' | 'scale' | 'pulse' | 'shimmer'
@@ -104,7 +103,10 @@ const variantConfig = {
 }
 
 const tapAnim = { scale: 0.96 }
-const pulseAnim = { scale: [1, 1.06, 1], transition: { duration: 1.4, repeat: Infinity, ease: easeInOut as any } }
+const pulseAnim = { 
+  scale: [1, 1.06, 1], 
+  transition: { duration: 1.4, repeat: Infinity, ease: easeInOut }
+}
 
 const PremiumButton = memo(forwardRef<HTMLButtonElement, PremiumButtonProps>(function PremiumButtonRaw({
   variant = 'primary',
@@ -131,7 +133,6 @@ const PremiumButton = memo(forwardRef<HTMLButtonElement, PremiumButtonProps>(fun
   const sizeStyles = sizeConfig[size]
   const variantStyles = variantConfig[variant]
 
-  // Magnetic mouse effect
   function handlePointerMove(e: React.PointerEvent<HTMLElement>) {
     if (!animations.includes('magnetic') || disabled || loading) return;
     const rect = (e.target as HTMLElement).getBoundingClientRect();
@@ -145,8 +146,7 @@ const PremiumButton = memo(forwardRef<HTMLButtonElement, PremiumButtonProps>(fun
     setIsMagnetic(false)
   }
 
-  // Ripple
-  function handleRipple(e: React.MouseEvent<HTMLButtonElement, MouseEvent>) {
+  function handleRipple(e: React.MouseEvent<HTMLButtonElement | HTMLAnchorElement, MouseEvent>) {
     if (!animations.includes('ripple') || disabled || loading) return;
     const rect = (e.target as HTMLElement).getBoundingClientRect()
     const x = e.clientX - rect.left
@@ -155,10 +155,8 @@ const PremiumButton = memo(forwardRef<HTMLButtonElement, PremiumButtonProps>(fun
     setTimeout(() => setRipples(prev => prev.slice(1)), 520)
   }
 
-  // Pulse animation config
   const pulse = animations.includes("pulse") ? pulseAnim : undefined
 
-  // Build className
   const baseClasses = [
     'relative overflow-hidden font-semibold transition-all duration-300',
     'focus:outline-none focus:ring-2 focus:ring-[#af92fb4b]',
@@ -194,10 +192,8 @@ const PremiumButton = memo(forwardRef<HTMLButtonElement, PremiumButtonProps>(fun
     transition: { type: "spring" as const, stiffness: 280 }
   }
 
-  // Button Body
   const content = (
     <>
-      {/* Glow */}
       {animations.includes('glow') && (
         <motion.div
           className="pointer-events-none absolute inset-0 rounded-xl opacity-20 z-[1]"
@@ -211,7 +207,6 @@ const PremiumButton = memo(forwardRef<HTMLButtonElement, PremiumButtonProps>(fun
           transition={{ duration: 0.36 }}
         />
       )}
-      {/* Ripple */}
       {animations.includes('ripple') &&
         <span className="absolute inset-0 pointer-events-none overflow-hidden rounded-xl z-[2]">
           <AnimatePresence>
@@ -234,7 +229,6 @@ const PremiumButton = memo(forwardRef<HTMLButtonElement, PremiumButtonProps>(fun
           </AnimatePresence>
         </span>
       }
-      {/* Content */}
       <span className="relative z-[5] flex items-center justify-center gap-2">
         {loading ? (
           <Loader2 size={sizeStyles.iconSize} className="animate-spin" />
@@ -257,7 +251,6 @@ const PremiumButton = memo(forwardRef<HTMLButtonElement, PremiumButtonProps>(fun
     </>
   );
 
-  // Render as link if href provided
   if (href) {
     return (
       <motion.a
@@ -268,15 +261,21 @@ const PremiumButton = memo(forwardRef<HTMLButtonElement, PremiumButtonProps>(fun
         {...motionProps}
         onPointerMove={handlePointerMove}
         onPointerLeave={handlePointerLeave}
+        onClick={e => {
+          if (animations.includes("ripple")) handleRipple(e);
+          if (onClick) onClick(e);
+        }}
       >
         {content}
       </motion.a>
     )
   }
 
-  // Main button
-  const { onDrag, onDragEnd, onDragStart, onAnimationStart, onAnimationEnd, onAnimationIteration, ...restProps } = props;
-  
+  const {
+    onDrag, onDragEnd, onDragStart, onAnimationStart,
+    onAnimationEnd, onAnimationIteration, ...restProps
+  } = props;
+
   return (
     <motion.button
       ref={ref ? ref : btnRef}
@@ -287,7 +286,7 @@ const PremiumButton = memo(forwardRef<HTMLButtonElement, PremiumButtonProps>(fun
       onPointerMove={handlePointerMove}
       onPointerLeave={handlePointerLeave}
       onClick={e => {
-        if (animations.includes("ripple")) handleRipple(e as any);
+        if (animations.includes("ripple")) handleRipple(e);
         if (onClick) onClick(e);
       }}
       {...restProps}
