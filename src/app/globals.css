@@ -1,26 +1,78 @@
 @import "tailwindcss";
 
+/* Your custom styles below */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  --background: #000000;
+  --foreground: #ffffff;
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  overflow-x: hidden;
+}
+
+/* XLEOS Custom Classes */
+.xleos-input {
+  @apply bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-purple-400/50 focus:border-transparent transition-all;
+}
+.glow-filter {
+  filter: drop-shadow(0 0 8px #ffe678cc) drop-shadow(0 0 2px #fffabfcc);
+}
+
+.glass {
+  @apply bg-white/5 backdrop-blur-xl border border-white/10;
+}
+
+.glass-purple {
+  @apply bg-purple-500/10 backdrop-blur-xl border border-purple-400/20;
+}
+
+.xleos-hero-title {
+  @apply bg-gradient-to-r from-white via-white to-purple-300 bg-clip-text text-transparent;
+}
+
+.xleos-feature-grid {
+  @apply grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8;
+}
+
+.xleos-feature-card {
+  @apply bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl p-8 hover:bg-purple-500/10 hover:border-purple-400/20 transition-all duration-500;
+}
+
+.xleos-navbar {
+  @apply fixed top-6 left-1/2 transform -translate-x-1/2 z-50;
+}
+
+.xleos-navbar-container {
+  @apply bg-white/5 backdrop-blur-xl border border-white/10 rounded-full px-8 py-4 flex items-center justify-between space-x-8 min-w-fit;
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(139, 92, 246, 0.5);
+  border-radius: 3px;
+}
+
+@keyframes spinOrbit {
+  100% { transform: rotate(360deg); }
+}
+.orbit {
+  position: absolute;
+  border-radius: 50%;
+  border: 2px dashed #9f80ffcc;
+  width: 110%; height: 110%;
+  left: -5%; top: -5%;
+  opacity: 0.3;
+  pointer-events: none;
+  animation: spinOrbit 16s linear infinite;
 }
