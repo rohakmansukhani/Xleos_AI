@@ -6,7 +6,7 @@ import PremiumButton from "../ui/PremiumButton";
 import { Loader2 } from "lucide-react";
 import { setAuthToken } from '../../utils/auth';
 
-export default function AuthModal({ onSuccess }: { onSuccess: () => void }) {
+export default function AuthModal({ onSuccessAction }: { onSuccessAction: () => void }) {
   const [mode, setMode] = useState<'login' | 'signup'>('login');
   const [loading, setLoading] = useState(false);
 
@@ -15,7 +15,7 @@ export default function AuthModal({ onSuccess }: { onSuccess: () => void }) {
     setTimeout(() => {
       setAuthToken(`${type.toUpperCase()}_USER_TOKEN`)
       setLoading(false)
-      onSuccess()
+      onSuccessAction()
     }, 1200)
   }
 
@@ -68,7 +68,7 @@ export default function AuthModal({ onSuccess }: { onSuccess: () => void }) {
           <LoginPage
             onLogin={(email, password) => {
               setAuthToken(email)
-              onSuccess();
+              onSuccessAction();
             }}
             onSwitchToSignup={() => setMode('signup')}
             hideTitle
@@ -77,7 +77,7 @@ export default function AuthModal({ onSuccess }: { onSuccess: () => void }) {
           <SignupPage
             onSignup={(email, password) => {
               setAuthToken(email);
-              onSuccess();
+              onSuccessAction();
             }}
             onSwitchToLogin={() => setMode('login')}
             hideTitle
