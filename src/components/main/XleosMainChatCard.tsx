@@ -40,7 +40,7 @@ export default function XleosMainChatCard({ onSubmitScript }: MainChatProps) {
     <div className="flex-1 relative">
       <textarea
         className="w-full rounded-xl border border-white/14 px-4 py-3 text-white text-base focus:outline-none focus:ring-2 focus:ring-[#b096f3]/35 transition placeholder:text-white/50 shadow-md resize-none bg-transparent"
-        placeholder="Describe your creative vision…"
+        placeholder="Enter Your Script"
         value={input}
         onChange={e => setInput(e.target.value)}
         rows={2}

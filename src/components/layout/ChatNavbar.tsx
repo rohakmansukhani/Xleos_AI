@@ -128,11 +128,7 @@ const ProfileDropdown: React.FC<{
         whileHover={{ scale: 1.04 }}
         title="Account"
       >
-        {user?.image ? (
-          <img src={user.image} alt="Avatar" className="w-9 h-9 rounded-full object-cover" />
-        ) : (
-          <span>{initials}</span>
-        )}
+        <User className="w-7 h-7 text-white/80" />
       </motion.button>
       <AnimatePresence>
         {open && (

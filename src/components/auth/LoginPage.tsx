@@ -3,11 +3,10 @@ import React, { useState } from "react";
 
 interface LoginPageProps {
   onLogin: (email: string, password: string) => void;
-  onSwitchToSignup: () => void;
   hideTitle?: boolean;
 }
 
-export default function LoginPage({ onLogin, onSwitchToSignup, hideTitle }: LoginPageProps) {
+export default function LoginPage({ onLogin, hideTitle }: LoginPageProps) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [err, setErr] = useState<string | null>(null);
@@ -52,9 +51,7 @@ export default function LoginPage({ onLogin, onSwitchToSignup, hideTitle }: Logi
         >
           Sign In
         </button>
-        <button type="button" onClick={onSwitchToSignup} className="mt-1 text-purple-300 text-xs underline">
-          Don&apos;t have an account? Sign up
-        </button>
+        {/* Signup button removed */}
       </form>
     </>
   );
