@@ -5,18 +5,40 @@ import PremiumButton from "../ui/PremiumButton";
 import { Loader2 } from "lucide-react";
 import { setAuthToken } from '../../utils/auth';
 
+
 export default function AuthModal({ onSuccessAction }: { onSuccessAction: () => void }) {
   // Only login mode is supported now
   const [loading, setLoading] = useState(false);
 
-  const handleSocialLogin = async (type: "google" | "apple") => {
-    setLoading(true)
-    setTimeout(() => {
-      setAuthToken(`${type.toUpperCase()}_USER_TOKEN`)
-      setLoading(false)
-      onSuccessAction()
-    }, 1200)
-  }
+  // Handler for Google login using Auth0
+  const loginWithGoogle = () => {
+    setLoading(true);
+    const domain = process.env.NEXT_PUBLIC_AUTH0_DOMAIN;
+    const clientId = process.env.NEXT_PUBLIC_AUTH0_CLIENT_ID;
+    const redirectUri = encodeURIComponent(
+      `${window.location.origin}/auth/callback`
+    );
+    const audience = encodeURIComponent(
+      process.env.NEXT_PUBLIC_AUTH0_AUDIENCE!
+    );
+    const url = `https://${domain}/authorize?response_type=code&client_id=${clientId}&redirect_uri=${redirectUri}&scope=openid email profile&audience=${audience}&connection=google-oauth2`;
+    window.location.href = url;
+  };
+
+  // Handler for Apple login using Auth0
+  const loginWithApple = () => {
+    setLoading(true);
+    const domain = process.env.NEXT_PUBLIC_AUTH0_DOMAIN;
+    const clientId = process.env.NEXT_PUBLIC_AUTH0_CLIENT_ID;
+    const redirectUri = encodeURIComponent(
+      `${window.location.origin}/auth/callback`
+    );
+    const audience = encodeURIComponent(
+      process.env.NEXT_PUBLIC_AUTH0_AUDIENCE!
+    );
+    const url = `https://${domain}/authorize?response_type=code&client_id=${clientId}&redirect_uri=${redirectUri}&scope=openid email profile&audience=${audience}&connection=apple`;
+    window.location.href = url;
+  };
 
   return (
     <div className="fixed inset-0 z-[150] flex items-center justify-center" style={{
@@ -36,7 +58,7 @@ export default function AuthModal({ onSuccessAction }: { onSuccessAction: () => 
             fullWidth
             disabled={loading}
             animations={['magnetic', 'glow']}
-            onClick={() => handleSocialLogin('google')}
+            onClick={loginWithGoogle}
             icon={<img src="/google.svg" className="w-5 h-5" alt="Google" />}
             iconPosition="left"
           >{loading ? <Loader2 className="animate-spin" /> : "Sign in with Google"}</PremiumButton>
@@ -47,7 +69,7 @@ export default function AuthModal({ onSuccessAction }: { onSuccessAction: () => 
             fullWidth
             disabled={loading}
             animations={['magnetic', 'glow']}
-            onClick={() => handleSocialLogin('apple')}
+            onClick={loginWithApple}
             icon={<img src="/apple.svg" className="w-5 h-5" alt="Apple" />}
             iconPosition="left"
           >{loading ? <Loader2 className="animate-spin" /> : "Sign in with Apple"}</PremiumButton>
