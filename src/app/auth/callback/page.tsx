@@ -1,79 +1,97 @@
-'use client'
-import React, { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
-import LoadingScreen from '@/components/ui/LoadingScreen';
-import { setAuthToken } from '@/utils/auth';
+"use client";
+import { useEffect, Suspense } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { Loader } from "lucide-react";
+import { toast } from "react-toastify";
+import axios from "axios";
+import { setAuthToken, setUserApprovalStatus } from "@/utils/auth";
 
-export default function AuthCallbackPage() {
+function CallbackInner() {
   const router = useRouter();
-  const [error, setError] = useState<string | null>(null);
+  const params = useSearchParams();
 
   useEffect(() => {
-    const handleCallback = async () => {
+    const exchangeCode = async () => {
+      const code = params.get("code");
+      if (!code) {
+        toast.error("No authorization code received");
+        router.push("/auth/login");
+        return;
+      }
+
       try {
-        const urlParams = new URLSearchParams(window.location.search);
-        const code = urlParams.get('code');
-        const error = urlParams.get('error');
+        console.log("Exchanging code for token:", code);
+        console.log("Backend URL:", process.env.NEXT_PUBLIC_BASEURL);
         
-        if (error) {
-          setError(`Authentication error: ${error}`);
-          setTimeout(() => router.push('/auth/login'), 3000);
-          return;
-        }
+        // Call your FastAPI backend's GET /auth/callback endpoint
+        const response = await axios.get(
+          `${process.env.NEXT_PUBLIC_BASEURL}/auth/callback`,
+          {
+            params: { code },
+            withCredentials: true, // Important for receiving cookies
+            headers: {
+              'ngrok-skip-browser-warning': 'true', // Skip ngrok browser warning
+              'Accept': 'application/json',
+            },
+          }
+        );
 
-        if (!code) {
-          setError('No authorization code received');
-          setTimeout(() => router.push('/auth/login'), 3000);
-          return;
-        }
+        console.log("Backend response:", response.data);
 
-        // Exchange code for token with your backend
-        const response = await fetch('/api/auth/callback', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ code })
-        });
+        if (response.status === 200 && response.data.message === "Login successful") {
+          // The backend sets the access_token as an HttpOnly cookie
+          // We'll create a simple token for frontend auth state management
+          const frontendToken = `AUTH0_${Date.now()}`;
+          setAuthToken(frontendToken);
+          
+          // Set user approval status from backend response or default to true
+          const userApproved = response.data.user?.approved ?? true;
+          setUserApprovalStatus(userApproved);
 
-        if (!response.ok) {
-          throw new Error('Failed to exchange code for token');
-        }
-
-        const { token, user } = await response.json();
-        
-        // Store token and redirect
-        setAuthToken(token);
-        
-        // Check if user is approved
-        if (user.isApproved === false) {
-          router.push('/auth/pending');
+          toast.success("Login successful!");
+          router.push("/");
+          router.refresh();
         } else {
-          router.push('/');
+          console.error("Unexpected response:", response);
+          toast.error("Login failed - unexpected response");
+          router.push("/auth/login");
         }
-        
-      } catch (err) {
-        console.error('Auth callback error:', err);
-        setError('Authentication failed. Please try again.');
-        setTimeout(() => router.push('/auth/login'), 3000);
+      } catch (error) {
+        console.error("Auth callback error:", error);
+        if (axios.isAxiosError(error)) {
+          const errorMessage = error.response?.data?.detail || "Login failed";
+          toast.error(errorMessage);
+        } else {
+          toast.error("Login failed");
+        }
+        router.push("/auth/login");
       }
     };
 
-    handleCallback();
-  }, [router]);
-
-  if (error) {
-    return (
-      <div className="relative min-h-screen w-full bg-gradient-to-tr from-black via-[#12062c] to-[#2e2175] flex items-center justify-center">
-        <div className="text-center">
-          <div className="text-red-400 text-xl font-semibold mb-4">{error}</div>
-          <div className="text-white/60">Redirecting to login...</div>
-        </div>
-      </div>
-    );
-  }
+    exchangeCode();
+  }, [params, router]);
 
   return (
-    <div className="relative min-h-screen w-full bg-gradient-to-tr from-black via-[#12062c] to-[#2e2175]">
-      <LoadingScreen message="Completing authentication..." />
+    <div className="text-center flex flex-col items-center">
+      <Loader className="animate-spin" size={48} color="#FA956A" />
+      <span className="ml-4 text-lg text-[#FA956A] mt-2">Processing login...</span>
+    </div>
+  );
+}
+
+export default function Callback() {
+  return (
+    <div className="relative min-h-screen w-full bg-gradient-to-tr from-black via-[#12062c] to-[#2e2175] flex items-center justify-center">
+      <Suspense
+        fallback={
+          <div className="text-center flex flex-col items-center">
+            <Loader className="animate-spin" size={48} color="#FA956A" />
+            <span className="ml-4 text-lg text-[#FA956A] mt-2">Loading...</span>
+          </div>
+        }
+      >
+        <CallbackInner />
+      </Suspense>
     </div>
   );
 }

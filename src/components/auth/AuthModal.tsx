@@ -18,10 +18,7 @@ export default function AuthModal({ onSuccessAction }: { onSuccessAction: () => 
     const redirectUri = encodeURIComponent(
       `${window.location.origin}/auth/callback`
     );
-    const audience = encodeURIComponent(
-      process.env.NEXT_PUBLIC_AUTH0_AUDIENCE!
-    );
-    const url = `https://${domain}/authorize?response_type=code&client_id=${clientId}&redirect_uri=${redirectUri}&scope=openid email profile&audience=${audience}&connection=google-oauth2`;
+    const url = `https://${domain}/authorize?response_type=code&client_id=${clientId}&redirect_uri=${redirectUri}&scope=openid profile email&connection=google-oauth2`;
     window.location.href = url;
   };
 
@@ -33,10 +30,7 @@ export default function AuthModal({ onSuccessAction }: { onSuccessAction: () => 
     const redirectUri = encodeURIComponent(
       `${window.location.origin}/auth/callback`
     );
-    const audience = encodeURIComponent(
-      process.env.NEXT_PUBLIC_AUTH0_AUDIENCE!
-    );
-    const url = `https://${domain}/authorize?response_type=code&client_id=${clientId}&redirect_uri=${redirectUri}&scope=openid email profile&audience=${audience}&connection=apple`;
+    const url = `https://${domain}/authorize?response_type=code&client_id=${clientId}&redirect_uri=${redirectUri}&scope=openid profile email&connection=apple`;
     window.location.href = url;
   };
 

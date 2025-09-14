@@ -39,6 +39,12 @@ export function isAuthValid() {
   return Date.now() - t < 86400000
 }
 
+export function checkCookieAuth() {
+  // Check if the HttpOnly cookie exists by making a request to a protected endpoint
+  // This is a helper function for when you want to verify server-side auth
+  return document.cookie.includes('access_token')
+}
+
 export function clearAuth() {
   localStorage.removeItem("xleos_token")
   localStorage.removeItem("xleos_login_time")

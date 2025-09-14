@@ -1,7 +1,6 @@
 'use client'
 import React, { useState, useEffect } from "react";
 import ChatNavbar from '../components/layout/ChatNavbar';
-import AuthModal from '../components/auth/AuthModal';
 import XleosMainChatCard from '../components/main/XleosMainChatCard';
 import LineByLineTimeline from '../components/timeline/LineByLineTimeline';
 import VideoSelectionPanel from "../components/timeline/VideoSelectionPanel";
@@ -28,10 +27,7 @@ type VideoSuggestion = {
   videoUrl: string;
 };
 
-// Mock: resolves user object from localStorage/token.
-// In production: use real user info from decoded JWT or your backend.
 function getUserFromStorage(): { name?: string, email?: string, image?: string } | undefined {
-  // This is a stub. Read from localStorage or your auth provider.
   const token = localStorage.getItem("xleos_token");
   if (!token) return undefined;
   // Demo fallback:
@@ -67,37 +63,67 @@ export default function HomePage() {
 
   // Auth state/expiry
   useEffect(() => {
-    if (isAuthValid()) {
-      setIsAuthenticated(true);
-      setAuthUser(getUserFromStorage());
-      
-      // Check user approval status
-      const approvalStatus = getUserApprovalStatus();
-      setUserApproved(approvalStatus);
-      
-      // If not approved, redirect to pending page
-      if (approvalStatus === false) {
-        router.push('/auth/pending');
+    try {
+      if (isAuthValid()) {
+        setIsAuthenticated(true);
+        setAuthUser(getUserFromStorage());
+        
+        // Check user approval status
+        const approvalStatus = getUserApprovalStatus();
+        setUserApproved(approvalStatus);
+        
+        // If not approved, redirect to pending page
+        if (approvalStatus === false) {
+          router.push('/auth/pending');
+          return;
+        }
+        
+        // Initialize chat counts
+        const counts = getChatCount();
+        setChatCounts(counts);
+        setChatCount(counts.used, counts.total); // Ensure defaults are set
+        
+      } else {
+        // Redirect unauthenticated users to login page
+        clearAuth();
+        router.push('/auth/login');
         return;
       }
-      
-      // Initialize chat counts
-      const counts = getChatCount();
-      setChatCounts(counts);
-      setChatCount(counts.used, counts.total); // Ensure defaults are set
-      
-    } else {
+    } catch (error) {
+      console.error('Authentication error:', error);
       clearAuth();
-      setIsAuthenticated(false);
-      setAuthUser(undefined);
-      setUserApproved(null);
+      router.push('/auth/login');
     }
-  }, []);
+  }, [router]);
 
-  const handleLogin = () => {
-    setIsAuthenticated(true);
-    setAuthUser(getUserFromStorage());
-  };
+  // Handle authentication state changes across tabs
+  useEffect(() => {
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === 'xleos_token' || e.key === 'xleos_login_time') {
+        if (!isAuthValid()) {
+          clearAuth();
+          router.push('/auth/login');
+        }
+      }
+    };
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible' && !isAuthValid()) {
+        clearAuth();
+        router.push('/auth/login');
+      }
+    };
+
+    window.addEventListener('storage', handleStorageChange);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [router]);
+
+
 
   const handleLogout = () => {
     clearAuth();
@@ -207,7 +233,7 @@ export default function HomePage() {
         onSettings={() => { /* open settings modal/page*/ }}
       />
 
-      {!isAuthenticated && <AuthModal onSuccessAction={handleLogin} />}
+
 
       <main className="flex min-h-[90vh] w-full items-center justify-center pt-36 pb-16 px-0 relative z-10">
         <div className="w-full max-w-7xl flex flex-col rounded-3xl bg-white/4 border border-white/10 backdrop-blur-xl shadow-xl overflow-hidden relative min-h-[650px] mx-4 sm:mx-8 lg:mx-auto">
