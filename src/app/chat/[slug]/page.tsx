@@ -1,17 +1,16 @@
 'use client'
 import React, { useState, useEffect } from "react";
-import ChatNavbar from '../components/layout/ChatNavbar';
-import AuthModal from '../components/auth/AuthModal';
-import XleosMainChatCard from '../components/main/XleosMainChatCard';
-import LineByLineTimeline from '../components/timeline/LineByLineTimeline';
-import VideoSelectionPanel from "../components/timeline/VideoSelectionPanel";
-import HistoryCard from '../components/history/HistoryCard';
-import LoadingScreen from '../components/ui/LoadingScreen';
-import { makeMockLineVideos } from '../utils/mockData';
-import WaitlistModal from '../components/main/WaitlistModal';
-import { isAuthValid, clearAuth, getUserApprovalStatus, getChatCount, incrementChatUsage, setChatCount } from '../utils/auth';
-import ChatLimitNotification from '../components/notifications/ChatLimitNotification';
-import { useRouter } from 'next/navigation';
+import { useParams } from 'next/navigation';
+import ChatNavbar from '@/components/layout/ChatNavbar';
+import AuthModal from '@/components/auth/AuthModal';
+import XleosMainChatCard from '@/components/main/XleosMainChatCard';
+import LineByLineTimeline from '@/components/timeline/LineByLineTimeline';
+import VideoSelectionPanel from "@/components/timeline/VideoSelectionPanel";
+import HistoryCard from '@/components/history/HistoryCard';
+import LoadingScreen from '@/components/ui/LoadingScreen';
+import { makeMockLineVideos } from '@/utils/mockData';
+import WaitlistModal from '@/components/main/WaitlistModal';
+import { isAuthValid, clearAuth } from '@/utils/auth';
 
 type ScriptSession = {
   id: string;
@@ -28,13 +27,9 @@ type VideoSuggestion = {
   videoUrl: string;
 };
 
-// Mock: resolves user object from localStorage/token.
-// In production: use real user info from decoded JWT or your backend.
 function getUserFromStorage(): { name?: string, email?: string, image?: string } | undefined {
-  // This is a stub. Read from localStorage or your auth provider.
   const token = localStorage.getItem("xleos_token");
   if (!token) return undefined;
-  // Demo fallback:
   if (token.includes("GOOGLE")) {
     return { name: "Google User", email: "googleuser@xleos.app", image: "/google-avatar.png" };
   }
@@ -44,11 +39,12 @@ function getUserFromStorage(): { name?: string, email?: string, image?: string }
   return { name: "Xleos User", email: "user@xleos.app" };
 }
 
-export default function HomePage() {
-  const router = useRouter();
+export default function ChatSlugPage() {
+  const params = useParams();
+  const chatId = params?.slug as string;
+  
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [authUser, setAuthUser] = useState<{ name?: string; email?: string; image?: string } | undefined>(undefined);
-  const [userApproved, setUserApproved] = useState<boolean | null>(null);
 
   const [activeView, setActiveView] = useState<'input' | 'timeline' | 'history'>('input');
   const [sessions, setSessions] = useState<ScriptSession[]>([]);
@@ -60,39 +56,22 @@ export default function HomePage() {
     lineText: string;
     suggestions: VideoSuggestion[];
   }>(null);
-  
-  // Chat limit notifications
-  const [showChatLimitModal, setShowChatLimitModal] = useState(false);
-  const [chatCounts, setChatCounts] = useState({ used: 0, total: 3, remaining: 3 });
 
-  // Auth state/expiry
   useEffect(() => {
     if (isAuthValid()) {
       setIsAuthenticated(true);
       setAuthUser(getUserFromStorage());
       
-      // Check user approval status
-      const approvalStatus = getUserApprovalStatus();
-      setUserApproved(approvalStatus);
-      
-      // If not approved, redirect to pending page
-      if (approvalStatus === false) {
-        router.push('/auth/pending');
-        return;
+      if (chatId) {
+        // Load specific chat session here when backend is connected
+        console.log('Loading chat with ID:', chatId);
       }
-      
-      // Initialize chat counts
-      const counts = getChatCount();
-      setChatCounts(counts);
-      setChatCount(counts.used, counts.total); // Ensure defaults are set
-      
     } else {
       clearAuth();
       setIsAuthenticated(false);
       setAuthUser(undefined);
-      setUserApproved(null);
     }
-  }, []);
+  }, [chatId]);
 
   const handleLogin = () => {
     setIsAuthenticated(true);
@@ -111,28 +90,11 @@ export default function HomePage() {
   };
 
   const handleScriptSubmit = (script: string) => {
-    // Check if user has chats remaining
-    if (chatCounts.remaining <= 0) {
-      setShowChatLimitModal(true);
-      return;
-    }
-
-    // Start processing immediately
     setProcessing(true);
-    
-    // Show non-blocking notification for first chat or remaining chats
-    if (chatCounts.used === 0 || chatCounts.remaining <= 2) {
-      setShowChatLimitModal(true);
-    }
-
     setTimeout(() => {
-      // Increment chat usage
-      const newCounts = incrementChatUsage();
-      setChatCounts(newCounts);
-
       const lines = script.split('\n').filter(l => l.trim());
       const newSession: ScriptSession = {
-        id: (Math.random() * 1e9).toFixed(0),
+        id: chatId || (Math.random() * 1e9).toFixed(0),
         script,
         lines,
         feedback: {},
@@ -141,11 +103,6 @@ export default function HomePage() {
       setSessions(prev => [newSession, ...prev]);
       setProcessing(false);
       setActiveView('timeline');
-      
-      // Show exhausted modal if this was the last chat
-      if (newCounts.remaining === 0) {
-        setTimeout(() => setShowChatLimitModal(true), 500);
-      }
     }, 1200);
   };
 
@@ -158,21 +115,13 @@ export default function HomePage() {
     });
   };
 
-  const handleVideoFeedback = (feedback: { [videoId: string]: { rating: number; comment: string } }) => {
+  const handleVideoFeedback = (rating: number, comment: string) => {
     if (!currentSession || videoModalState === null) return;
-    
-    // Calculate average rating from all video feedback
-    const ratings = Object.values(feedback).map(f => f.rating);
-    const avgRating = ratings.length > 0 ? Math.round(ratings.reduce((sum, r) => sum + r, 0) / ratings.length) : 0;
-    
-    // Combine all comments
-    const combinedComment = Object.values(feedback).map(f => f.comment).filter(c => c.trim()).join(' | ');
-    
     const updatedSession = {
       ...currentSession,
       feedback: {
         ...currentSession.feedback,
-        [videoModalState.lineIdx]: { rating: avgRating, comment: combinedComment },
+        [videoModalState.lineIdx]: { rating, comment },
       },
     };
     setCurrentSession(updatedSession);
@@ -193,7 +142,6 @@ export default function HomePage() {
 
   return (
     <div className="relative min-h-screen w-full bg-gradient-to-tr from-black via-[#12062c] to-[#2e2175]">
-      {/* Cubes Bg */}
       <div className="absolute" style={{ top: 0, right: 0, width: "55vw", height: "100vh", zIndex: 1, pointerEvents: "none", display: "flex", alignItems: "center", justifyContent: "center" }} aria-hidden="true">
         <img src="/cubes.svg" alt="" style={{ width: "100%", height: "100%", objectFit: "contain", opacity: 0.23, userSelect: "none" }} draggable={false} />
       </div>
@@ -204,7 +152,7 @@ export default function HomePage() {
         onWaitlistClick={() => setShowWaitlistModal(true)}
         user={isAuthenticated ? authUser : undefined}
         onSignOut={handleLogout}
-        onSettings={() => { /* open settings modal/page*/ }}
+        onSettings={() => {}}
       />
 
       {!isAuthenticated && <AuthModal onSuccessAction={handleLogin} />}
@@ -213,7 +161,6 @@ export default function HomePage() {
         <div className="w-full max-w-7xl flex flex-col rounded-3xl bg-white/4 border border-white/10 backdrop-blur-xl shadow-xl overflow-hidden relative min-h-[650px] mx-4 sm:mx-8 lg:mx-auto">
           <img src="/elements/flower.png" alt="" className="absolute left-8 bottom-20 w-32 opacity-15 pointer-events-none blur-[3px]" />
 
-          {/* Content Sections */}
           {(activeView === 'input' && !processing) && (
             <XleosMainChatCard onSubmitScript={handleScriptSubmit} />
           )}
@@ -240,7 +187,6 @@ export default function HomePage() {
         </div>
       </main>
 
-      {/* Video Selection Panel */}
       {videoModalState !== null && (
         <VideoSelectionPanel
           line={{
@@ -259,22 +205,12 @@ export default function HomePage() {
               total_ratings: 0,
             }))
           }}
-          onCompleteAction={handleVideoFeedback}
+          onCompleteAction={() => setVideoModalState(null)}
           onCloseAction={() => setVideoModalState(null)}
         />
       )}
 
-      {/* Waitlist Modal */}
       <WaitlistModal isOpen={showWaitlistModal} onClose={() => setShowWaitlistModal(false)} />
-
-      {/* Chat Limit Notification */}
-      <ChatLimitNotification
-        isOpen={showChatLimitModal}
-        onClose={() => setShowChatLimitModal(false)}
-        chatsRemaining={chatCounts.remaining}
-        totalChats={chatCounts.total}
-        onOpenWaitlist={() => setShowWaitlistModal(true)}
-      />
     </div>
   );
 }

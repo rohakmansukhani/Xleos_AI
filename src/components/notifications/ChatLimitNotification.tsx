@@ -1,0 +1,297 @@
+'use client'
+import React from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { MessageCircle, AlertTriangle, PartyPopper, ExternalLink } from 'lucide-react';
+
+interface ChatLimitNotificationProps {
+  isOpen: boolean;
+  onClose: () => void;
+  chatsRemaining: number;
+  totalChats: number;
+  onOpenWaitlist?: () => void;
+}
+
+export default function ChatLimitNotification({ 
+  isOpen, 
+  onClose, 
+  chatsRemaining, 
+  totalChats,
+  onOpenWaitlist
+}: ChatLimitNotificationProps) {
+  const isFirstTime = chatsRemaining === totalChats;
+  const isLastChat = chatsRemaining === 1;
+  const isExhausted = chatsRemaining === 0;
+
+  const getNotificationContent = () => {
+    if (isExhausted) {
+      return {
+        icon: <PartyPopper className="w-8 h-8 text-[#bb80ff]" />,
+        title: "Thank You for Using Xleos!",
+        message: "You've used all your available chats. Stay tuned and join our waitlist for expanded access to the full AI studio experience.",
+        actionText: "Join Waitlist",
+        bgGradient: "from-[#7c5dfa]/20 to-[#bb80ff]/20",
+        iconBg: "bg-[#7c5dfa]/20",
+        buttonGradient: "from-[#7c5dfa] to-[#bb80ff]"
+      };
+    }
+
+    if (isFirstTime) {
+      return {
+        icon: <MessageCircle className="w-8 h-8 text-[#60a5fa]" />,
+        title: "Welcome to Xleos AI!",
+        message: `You have ${chatsRemaining} chats available due to limited resources. Make them count with your best creative ideas!`,
+        actionText: "Got it!",
+        bgGradient: "from-[#3b82f6]/20 to-[#60a5fa]/20",
+        iconBg: "bg-[#3b82f6]/20",
+        buttonGradient: "from-[#3b82f6] to-[#60a5fa]"
+      };
+    }
+
+    if (isLastChat) {
+      return {
+        icon: <AlertTriangle className="w-8 h-8 text-[#f59e0b]" />,
+        title: "Final Chat Remaining!",
+        message: "This is your last available chat. After this, consider joining our waitlist for more access.",
+        actionText: "Understood",
+        bgGradient: "from-[#f59e0b]/20 to-[#fbbf24]/20",
+        iconBg: "bg-[#f59e0b]/20",
+        buttonGradient: "from-[#f59e0b] to-[#fbbf24]"
+      };
+    }
+
+    return {
+      icon: <MessageCircle className="w-8 h-8 text-[#10b981]" />,
+      title: "Chat Update",
+      message: `You have ${chatsRemaining} chat${chatsRemaining === 1 ? '' : 's'} remaining out of ${totalChats}.`,
+      actionText: "Continue",
+      bgGradient: "from-[#10b981]/20 to-[#34d399]/20",
+      iconBg: "bg-[#10b981]/20",
+      buttonGradient: "from-[#10b981] to-[#34d399]"
+    };
+  };
+
+  const content = getNotificationContent();
+
+  const handleAction = () => {
+    if (isExhausted && onOpenWaitlist) {
+      onOpenWaitlist();
+    }
+    onClose();
+  };
+
+  // For exhausted state, show modal - for others, show toast notification
+  if (isExhausted) {
+    return (
+      <AnimatePresence>
+        {isOpen && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[200] flex items-center justify-center p-4"
+            style={{
+              background: "radial-gradient(ellipse at 55% 48%,rgba(80,60,200,0.35) 0 45%,rgba(16,14,32,0.98) 100%)",
+              backdropFilter: 'blur(22px) saturate(1.8)'
+            }}
+            onClick={onClose}
+          >
+          <motion.div
+            initial={{ scale: 0.9, y: 20, opacity: 0 }}
+            animate={{ scale: 1, y: 0, opacity: 1 }}
+            exit={{ scale: 0.9, y: 20, opacity: 0 }}
+            transition={{ type: "spring", stiffness: 300, damping: 30 }}
+            className={`rounded-2xl bg-gradient-to-br ${content.bgGradient} backdrop-blur-xl border border-white/10 shadow-2xl max-w-md w-full p-8 text-center relative overflow-hidden`}
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Decorative elements */}
+            <img src="/elements/flower.png" alt="" className="absolute right-4 top-4 w-12 opacity-10 pointer-events-none blur-[2px]" />
+            
+            {/* Icon */}
+            <motion.div
+              initial={{ scale: 0 }}
+              animate={{ scale: 1 }}
+              transition={{ delay: 0.1, type: "spring", stiffness: 200 }}
+              className="mb-6 flex justify-center"
+            >
+              <div className={`w-16 h-16 rounded-full ${content.iconBg} flex items-center justify-center border border-white/20`}>
+                {content.icon}
+              </div>
+            </motion.div>
+
+            {/* Title */}
+            <motion.h2
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.2 }}
+              className="text-2xl font-bold text-white mb-4"
+            >
+              {content.title}
+            </motion.h2>
+
+            {/* Message */}
+            <motion.p
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.3 }}
+              className="text-white/80 text-base leading-relaxed mb-8"
+            >
+              {content.message}
+            </motion.p>
+
+            {/* Progress indicator for non-exhausted states */}
+            {!isExhausted && (
+              <motion.div
+                initial={{ opacity: 0, scale: 0.8 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ delay: 0.4 }}
+                className="mb-6"
+              >
+                <div className="flex justify-between items-center mb-2">
+                  <span className="text-white/60 text-sm">Chats Used</span>
+                  <span className="text-white font-medium text-sm">
+                    {totalChats - chatsRemaining}/{totalChats}
+                  </span>
+                </div>
+                <div className="w-full bg-white/10 rounded-full h-2 overflow-hidden">
+                  <motion.div
+                    initial={{ width: 0 }}
+                    animate={{ width: `${((totalChats - chatsRemaining) / totalChats) * 100}%` }}
+                    transition={{ delay: 0.5, duration: 0.8, ease: "easeOut" }}
+                    className={`h-full bg-gradient-to-r ${content.buttonGradient} rounded-full`}
+                  />
+                </div>
+              </motion.div>
+            )}
+
+            {/* Action buttons */}
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.5 }}
+              className="space-y-3"
+            >
+              <motion.button
+                onClick={handleAction}
+                className={`w-full bg-gradient-to-r ${content.buttonGradient} text-white font-semibold py-3 px-6 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 flex items-center justify-center gap-2`}
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+              >
+                {content.actionText}
+              </motion.button>
+              
+              {isExhausted && (
+                <motion.button
+                  onClick={() => window.open('https://xleosweb.vercel.app', '_blank')}
+                  className="w-full bg-white/10 hover:bg-white/20 border border-white/20 text-white font-medium py-2 px-6 rounded-xl transition-all duration-300 flex items-center justify-center gap-2"
+                  whileHover={{ scale: 1.01 }}
+                  whileTap={{ scale: 0.99 }}
+                >
+                  Visit Xleos Website
+                  <ExternalLink className="w-4 h-4" />
+                </motion.button>
+              )}
+              
+              {!isFirstTime && (
+                <motion.button
+                  onClick={onClose}
+                  className="w-full text-white/60 hover:text-white/80 font-medium py-2 transition-colors duration-200"
+                  whileHover={{ scale: 1.01 }}
+                  whileTap={{ scale: 0.99 }}
+                >
+                  Maybe Later
+                </motion.button>
+              )}
+            </motion.div>
+          </motion.div>
+        </motion.div>
+          )}
+        </AnimatePresence>
+      );
+    }
+
+    // For non-exhausted states, show toast notification at top right
+    return (
+      <AnimatePresence>
+        {isOpen && (
+          <motion.div
+            initial={{ opacity: 0, x: 100, y: -20 }}
+            animate={{ opacity: 1, x: 0, y: 0 }}
+            exit={{ opacity: 0, x: 100, y: -20 }}
+            className="fixed top-6 right-6 z-[200] max-w-sm"
+          >
+            <motion.div
+              className={`rounded-xl bg-gradient-to-br ${content.bgGradient} backdrop-blur-xl border border-white/10 shadow-lg p-4 relative overflow-hidden`}
+              whileHover={{ scale: 1.02 }}
+            >
+              {/* Decorative elements */}
+              <img src="/elements/flower.png" alt="" className="absolute right-2 top-2 w-8 opacity-10 pointer-events-none blur-[1px]" />
+              
+              <div className="flex items-start gap-3">
+                {/* Icon */}
+                <div className={`w-10 h-10 rounded-full ${content.iconBg} flex items-center justify-center border border-white/20 flex-shrink-0`}>
+                  {React.cloneElement(content.icon, { className: "w-5 h-5" })}
+                </div>
+
+                {/* Content */}
+                <div className="flex-1 min-w-0">
+                  <h3 className="text-white font-semibold text-sm mb-1 truncate">
+                    {content.title}
+                  </h3>
+                  <p className="text-white/80 text-xs leading-relaxed mb-3">
+                    {content.message}
+                  </p>
+
+                  {/* Progress bar for non-exhausted states */}
+                  <div className="mb-3">
+                    <div className="flex justify-between items-center mb-1">
+                      <span className="text-white/60 text-xs">Chats Used</span>
+                      <span className="text-white font-medium text-xs">
+                        {totalChats - chatsRemaining}/{totalChats}
+                      </span>
+                    </div>
+                    <div className="w-full bg-white/10 rounded-full h-1.5 overflow-hidden">
+                      <motion.div
+                        initial={{ width: 0 }}
+                        animate={{ width: `${((totalChats - chatsRemaining) / totalChats) * 100}%` }}
+                        transition={{ delay: 0.3, duration: 0.6, ease: "easeOut" }}
+                        className={`h-full bg-gradient-to-r ${content.buttonGradient} rounded-full`}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Action button */}
+                  <motion.button
+                    onClick={handleAction}
+                    className={`w-full bg-gradient-to-r ${content.buttonGradient} text-white font-medium py-2 px-3 rounded-lg text-xs shadow hover:shadow-lg transition-all duration-200`}
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                  >
+                    {content.actionText}
+                  </motion.button>
+                </div>
+
+                {/* Close button */}
+                <motion.button
+                  onClick={onClose}
+                  className="text-white/40 hover:text-white/80 text-lg leading-none p-1 transition-colors flex-shrink-0"
+                  whileHover={{ scale: 1.1 }}
+                  whileTap={{ scale: 0.9 }}
+                >
+                  ×
+                </motion.button>
+              </div>
+            </motion.div>
+
+            {/* Auto dismiss after 6 seconds */}
+            <motion.div
+              className="absolute bottom-0 left-0 h-0.5 bg-gradient-to-r from-white/30 to-white/10 rounded-full"
+              initial={{ width: "100%" }}
+              animate={{ width: "0%" }}
+              transition={{ duration: 6, ease: "linear" }}
+              onAnimationComplete={onClose}
+            />
+          </motion.div>
+        )}
+      </AnimatePresence>
+    );
+  }

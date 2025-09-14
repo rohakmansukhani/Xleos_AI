@@ -3,6 +3,34 @@ export function setAuthToken(token: string) {
   localStorage.setItem("xleos_login_time", Date.now().toString())
 }
 
+export function setUserApprovalStatus(isApproved: boolean) {
+  localStorage.setItem("xleos_user_approved", isApproved.toString())
+}
+
+export function getUserApprovalStatus(): boolean | null {
+  const status = localStorage.getItem("xleos_user_approved")
+  if (status === null) return null
+  return status === "true"
+}
+
+export function setChatCount(used: number, total: number) {
+  localStorage.setItem("xleos_chats_used", used.toString())
+  localStorage.setItem("xleos_chats_total", total.toString())
+}
+
+export function getChatCount(): { used: number; total: number; remaining: number } {
+  const used = Number(localStorage.getItem("xleos_chats_used") || "0")
+  const total = Number(localStorage.getItem("xleos_chats_total") || "3")
+  return { used, total, remaining: Math.max(0, total - used) }
+}
+
+export function incrementChatUsage() {
+  const { used, total } = getChatCount()
+  const newUsed = Math.min(used + 1, total)
+  setChatCount(newUsed, total)
+  return { used: newUsed, total, remaining: Math.max(0, total - newUsed) }
+}
+
 export function isAuthValid() {
   const token = localStorage.getItem("xleos_token")
   const t = Number(localStorage.getItem("xleos_login_time"))
@@ -14,4 +42,7 @@ export function isAuthValid() {
 export function clearAuth() {
   localStorage.removeItem("xleos_token")
   localStorage.removeItem("xleos_login_time")
+  localStorage.removeItem("xleos_user_approved")
+  localStorage.removeItem("xleos_chats_used")
+  localStorage.removeItem("xleos_chats_total")
 }

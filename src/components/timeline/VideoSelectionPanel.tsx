@@ -26,13 +26,16 @@ interface Line {
 
 interface VideoSelectionPanelProps {
   line: Line;
-  onCompleteAction: () => void;
+  onCompleteAction: (feedback: { [videoId: string]: { rating: number; comment: string } }) => void;
   onCloseAction: () => void;
 }
 
 export default function VideoSelectionPanel({ line, onCompleteAction, onCloseAction }: VideoSelectionPanelProps) {
   const [selectedVideos, setSelectedVideos] = useState<Set<string>>(new Set());
   const [videoRatings, setVideoRatings] = useState<{ [key: string]: number }>({});
+  const [videoComments, setVideoComments] = useState<{ [key: string]: string }>({});
+  const [showFeedbackWarning, setShowFeedbackWarning] = useState(false);
+  const [attemptedSubmit, setAttemptedSubmit] = useState(false);
 
   const handleVideoSelect = (videoId: string) => {
     setSelectedVideos(prev => {
@@ -47,8 +50,48 @@ export default function VideoSelectionPanel({ line, onCompleteAction, onCloseAct
   };
 
   const handleRating = async (video: Video, rating: number) => {
-    // Implement API call as needed
     setVideoRatings(prev => ({ ...prev, [video.id]: rating }));
+    if (attemptedSubmit) setShowFeedbackWarning(false);
+  };
+
+  const handleCommentChange = (videoId: string, comment: string) => {
+    setVideoComments(prev => ({ ...prev, [videoId]: comment }));
+    if (attemptedSubmit) setShowFeedbackWarning(false);
+  };
+
+  const validateFeedback = () => {
+    const allVideosRated = line.videos.every(video => videoRatings[video.id] > 0);
+    const allVideosCommented = line.videos.every(video => 
+      videoComments[video.id] && videoComments[video.id].trim().length > 0
+    );
+    return allVideosRated && allVideosCommented;
+  };
+
+  const handleComplete = () => {
+    setAttemptedSubmit(true);
+    
+    if (!validateFeedback()) {
+      setShowFeedbackWarning(true);
+      return;
+    }
+
+    const feedback: { [videoId: string]: { rating: number; comment: string } } = {};
+    line.videos.forEach(video => {
+      feedback[video.id] = {
+        rating: videoRatings[video.id],
+        comment: videoComments[video.id]
+      };
+    });
+
+    onCompleteAction(feedback);
+  };
+
+  const handleClose = () => {
+    if (Object.keys(videoRatings).length > 0 || Object.keys(videoComments).length > 0) {
+      setShowFeedbackWarning(true);
+      return;
+    }
+    onCloseAction();
   };
 
   const handleDownload = async (video: Video) => {
@@ -116,11 +159,28 @@ export default function VideoSelectionPanel({ line, onCompleteAction, onCloseAct
             }}>
               Rate AI Stock Suggestions
             </Typography>
-            <Typography variant="body2" sx={{ color: 'rgba(210, 191, 255, 0.84)' }}>
+            <Typography variant="body2" sx={{ color: 'rgba(210, 191, 255, 0.84)', mb: 1 }}>
               {line.text}
             </Typography>
+            {showFeedbackWarning && (
+              <motion.div
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                style={{
+                  background: "linear-gradient(90deg, rgba(239, 68, 68, 0.2), rgba(248, 113, 113, 0.2))",
+                  border: "1px solid rgba(239, 68, 68, 0.3)",
+                  borderRadius: "8px",
+                  padding: "8px 12px",
+                  marginTop: "8px"
+                }}
+              >
+                <Typography variant="body2" sx={{ color: '#fca5a5', fontWeight: 500 }}>
+                  Please rate and comment on all 5 videos to help improve our AI model
+                </Typography>
+              </motion.div>
+            )}
           </Box>
-          <IconButton onClick={onCloseAction} sx={{ color: 'white' }}>
+          <IconButton onClick={handleClose} sx={{ color: 'white' }}>
             <Close />
           </IconButton>
         </Box>
@@ -215,8 +275,50 @@ export default function VideoSelectionPanel({ line, onCompleteAction, onCloseAct
                       }}
                     />
                     <Typography variant="caption" sx={{ color: '#b3a5e1' }}>
-                      ({video.total_ratings})
+                      ({videoRatings[video.id] || 0}/5)
                     </Typography>
+                  </Box>
+
+                  {/* Comment Field */}
+                  <Box sx={{ mb: 1.2 }}>
+                    <textarea
+                      placeholder="Share your thoughts on this video..."
+                      value={videoComments[video.id] || ''}
+                      onChange={(e) => handleCommentChange(video.id, e.target.value)}
+                      style={{
+                        width: '100%',
+                        minHeight: '60px',
+                        backgroundColor: 'rgba(255,255,255,0.08)',
+                        border: attemptedSubmit && !videoComments[video.id]?.trim() 
+                          ? '1px solid rgba(239, 68, 68, 0.5)' 
+                          : '1px solid rgba(170,150,250,0.23)',
+                        borderRadius: '8px',
+                        padding: '8px 12px',
+                        color: 'white',
+                        fontSize: '14px',
+                        fontFamily: 'inherit',
+                        resize: 'vertical',
+                        outline: 'none',
+                        transition: 'border-color 0.2s ease'
+                      }}
+                      onFocus={(e) => {
+                        e.target.style.borderColor = 'rgba(170,150,250,0.6)';
+                      }}
+                      onBlur={(e) => {
+                        e.target.style.borderColor = attemptedSubmit && !videoComments[video.id]?.trim()
+                          ? 'rgba(239, 68, 68, 0.5)'
+                          : 'rgba(170,150,250,0.23)';
+                      }}
+                    />
+                    {attemptedSubmit && (!videoRatings[video.id] || !videoComments[video.id]?.trim()) && (
+                      <Typography variant="caption" sx={{ color: '#ef4444', fontSize: '12px', mt: 0.5, display: 'block' }}>
+                        {!videoRatings[video.id] && !videoComments[video.id]?.trim() 
+                          ? 'Rating and comment required'
+                          : !videoRatings[video.id] 
+                          ? 'Rating required' 
+                          : 'Comment required'}
+                      </Typography>
+                    )}
                   </Box>
 
                   {/* Actions */}
@@ -250,17 +352,22 @@ export default function VideoSelectionPanel({ line, onCompleteAction, onCloseAct
           alignItems: 'center',
           background: "linear-gradient(92deg,rgba(89,80,180,0.10),rgba(49,39,110,0.16))"
         }}>
-          <Typography variant="body2" sx={{ color: '#beb6e7', fontWeight: 400 }}>
-            {selectedVideos.size} videos selected
-          </Typography>
+          <Box>
+            <Typography variant="body2" sx={{ color: '#beb6e7', fontWeight: 400 }}>
+              Feedback provided: {line.videos.filter(v => videoRatings[v.id] && videoComments[v.id]?.trim()).length}/{line.videos.length} videos
+            </Typography>
+            <Typography variant="caption" sx={{ color: '#9ca3af', fontSize: '11px' }}>
+              Rate and comment on all videos to continue
+            </Typography>
+          </Box>
           <Box sx={{ display: 'flex', gap: 2 }}>
-            <Button onClick={onCloseAction} sx={{ color: '#ad9fec', fontWeight: 500 }}>
+            <Button onClick={handleClose} sx={{ color: '#ad9fec', fontWeight: 500 }}>
               Cancel
             </Button>
             <Button
-              onClick={onCompleteAction}
+              onClick={handleComplete}
               variant="contained"
-              disabled={selectedVideos.size === 0}
+              disabled={!validateFeedback()}
               sx={{
                 background: "linear-gradient(94deg,#7c5dfa 4%,#b998fb 97%)",
                 color: 'white',
@@ -275,7 +382,7 @@ export default function VideoSelectionPanel({ line, onCompleteAction, onCloseAct
                 }
               }}
             >
-              Complete Selection
+              Done
             </Button>
           </Box>
         </Box>
