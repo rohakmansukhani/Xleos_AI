@@ -29,7 +29,7 @@ export default function ScriptInputCard({ onSubmitAction }: { onSubmitAction: (s
         Describe your vision as a script or creative brief—AI will generate storyboard lines and surface the best stock video clips for each moment.
       </p>
       <textarea
-        className="w-full max-w-2xl rounded-xl bg-[#38326a2e] border border-[#7c5dfa33] px-6 py-5 text-white/90 text-lg min-h-[120px] focus:outline-none focus:ring-2 focus:ring-[#a79bfa]/30 transition placeholder:text-[#cabcf7c6] shadow-lg resize-none"
+        className="w-full max-w-2xl rounded-xl border border-[#7c5dfa33] px-6 py-5 text-white/90 text-lg min-h-[120px] focus:outline-none focus:ring-2  transition placeholder:text-[#cabcf7c6] resize-none"
         placeholder="Enter Your Script"
         value={input}
         onChange={e => setInput(e.target.value)}

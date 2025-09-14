@@ -187,7 +187,6 @@ export default function HomePage() {
   const handleVideoFeedback = (feedback: { [videoId: string]: { rating: number; comment: string } }) => {
     if (!currentSession || videoModalState === null) return;
     
-    // Calculate average rating from all video feedback
     const ratings = Object.values(feedback).map(f => f.rating);
     const avgRating = ratings.length > 0 ? Math.round(ratings.reduce((sum, r) => sum + r, 0) / ratings.length) : 0;
     
