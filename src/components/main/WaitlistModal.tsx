@@ -1,6 +1,5 @@
 'use client';
-
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   X, Mail, User, Briefcase, CheckCircle, AlertCircle, Sparkles,
@@ -15,18 +14,18 @@ interface WaitlistModalProps {
   className?: string;
 }
 interface FormData {
-  name: string;
-  email: string;
+  fullName: string;
+  address: string;
   role: string;
-  useCase: string;
-  company?: string;
+  company: string;
+  use: string;
 }
 interface FormErrors {
-  name?: string;
-  email?: string;
+  fullName?: string;
+  address?: string;
   role?: string;
-  useCase?: string;
   company?: string;
+  use?: string;
 }
 
 const roles = [
@@ -116,11 +115,11 @@ const WaitlistModal: React.FC<WaitlistModalProps> = ({
   className = ''
 }) => {
   const [formData, setFormData] = useState<FormData>({
-    name: "",
-    email: "",
+    fullName: "",
+    address: "",
     role: "",
-    useCase: "",
-    company: ""
+    company: "",
+    use: ""
   });
   const [errors, setErrors] = useState<FormErrors>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -135,20 +134,20 @@ const WaitlistModal: React.FC<WaitlistModalProps> = ({
   // Validation
   function validateForm(): FormErrors {
     const n: FormErrors = {};
-    if (!formData.name.trim())
-      n.name = 'Name is required';
-    else if (formData.name.length < 2)
-      n.name = 'Name must be at least 2 characters';
-    if (!formData.email.trim())
-      n.email = 'Email is required';
-    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email))
-      n.email = 'Please enter a valid email address';
+    if (!formData.fullName.trim())
+      n.fullName = 'Name is required';
+    else if (formData.fullName.length < 2)
+      n.fullName = 'Name must be at least 2 characters';
+    if (!formData.address.trim())
+      n.address = 'Email is required';
+    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.address))
+      n.address = 'Please enter a valid email address';
     if (!formData.role)
       n.role = 'Please select your role';
-    if (!formData.useCase.trim())
-      n.useCase = 'Please tell us how you plan to use XLEOS';
-    else if (formData.useCase.length < 10)
-      n.useCase = 'Please provide more details (at least 10 characters)';
+    if (!formData.use.trim())
+      n.use = 'Please tell us how you plan to use XLEOS';
+    else if (formData.use.length < 10)
+      n.use = 'Please provide more details (at least 10 characters)';
     return n;
   }
 
@@ -160,10 +159,23 @@ const WaitlistModal: React.FC<WaitlistModalProps> = ({
     if (Object.keys(errs).length > 0) return;
     setIsSubmitting(true);
     try {
-      await new Promise(res => setTimeout(res, 1500));
+      // Send to API
+      const res = await fetch('/api/collect-email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(formData)
+      });
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || 'Something went wrong');
+      }
       setIsSuccess(true);
-    } catch (e) {
-      setErrors({ email: 'Something went wrong. Please try again.' });
+    } catch (e: unknown) {
+      let message = 'Something went wrong. Please try again.';
+      if (e instanceof Error) {
+        message = e.message;
+      }
+      setErrors({ address: message });
     } finally {
       setIsSubmitting(false);
     }
@@ -186,7 +198,7 @@ const WaitlistModal: React.FC<WaitlistModalProps> = ({
     <AnimatePresence>
       {isOpen && (
         <motion.div
-          className={`fixed inset-0 z-[200] flex items-center justify-center p-4 ${className}`}
+          className={`fixed inset-0 z-[200] flex items-center justify-center p-3 sm:p-6 bg-opacity-95 ${className}`}
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0, transition: { duration: 0.22 } }}
@@ -198,7 +210,7 @@ const WaitlistModal: React.FC<WaitlistModalProps> = ({
             initial={{ opacity: 0, scale: 0.93, y: 28 }}
             animate={{ opacity: 1, scale: 1, y: 0, transition: { type: 'spring', bounce: 0.32, duration: 0.58 } }}
             exit={{ opacity: 0, scale: 0.95, y: 50, transition: { duration: 0.29 } }}
-            className="relative w-full max-w-md bg-[rgba(34,28,52,0.94)] backdrop-blur-xl border border-white/10 rounded-3xl p-8 shadow-2xl"
+            className="relative w-full max-w-md md:max-w-lg lg:max-w-xl max-h-[90vh] overflow-y-auto bg-[rgba(34,28,52,0.94)] backdrop-blur-xl border border-white/10 rounded-3xl p-4 sm:p-8 shadow-2xl"
             onClick={e => e.stopPropagation()}
           >
             {/* Close */}
@@ -206,7 +218,7 @@ const WaitlistModal: React.FC<WaitlistModalProps> = ({
               whileTap={{ scale: 0.95 }}
               onClick={onClose}
               type="button"
-              className="absolute top-6 right-6 w-8 h-8 rounded-full bg-white/10 hover:bg-white/16 flex items-center justify-center transition-colors group z-10"
+              className="absolute top-4 right-4 w-8 h-8 rounded-full bg-white/10 hover:bg-white/16 flex items-center justify-center transition-colors group z-10"
             >
               <X size={16} className="text-white/70 group-hover:text-white" />
             </motion.button>
@@ -238,13 +250,13 @@ const WaitlistModal: React.FC<WaitlistModalProps> = ({
                     <User size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-white/50" />
                     <input
                       type="text"
-                      value={formData.name}
-                      onChange={e => handleInputChange('name', e.target.value)}
+                      value={formData.fullName}
+                      onChange={e => handleInputChange('fullName', e.target.value)}
                       placeholder="Enter your full name"
-                      className={`w-full px-12 py-3 bg-white/5 border border-white/16 rounded-xl text-white placeholder:text-[#dfd7fa82] transition focus:outline-none focus:ring-2 focus:ring-[#b096f3]/35 ${errors.name ? 'border-red-400' : ''}`}
+                      className={`w-full px-12 py-3 bg-white/5 border border-white/16 rounded-xl text-white placeholder:text-[#dfd7fa82] transition focus:outline-none focus:ring-2 focus:ring-[#b096f3]/35 ${errors.fullName ? 'border-red-400' : ''}`}
                     />
                   </div>
-                  {errors.name && <p className="text-red-400 text-sm mt-1 flex items-center gap-1"><AlertCircle size={14} />{errors.name}</p>}
+                  {errors.fullName && <p className="text-red-400 text-sm mt-1 flex items-center gap-1"><AlertCircle size={14} />{errors.fullName}</p>}
                 </motion.div>
                 <motion.div className="mb-2" layout>
                   <label className="block text-sm font-medium text-white/90 mb-2">Email Address *</label>
@@ -252,13 +264,13 @@ const WaitlistModal: React.FC<WaitlistModalProps> = ({
                     <Mail size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-white/50" />
                     <input
                       type="email"
-                      value={formData.email}
-                      onChange={e => handleInputChange('email', e.target.value)}
+                      value={formData.address}
+                      onChange={e => handleInputChange('address', e.target.value)}
                       placeholder="your.email@example.com"
-                      className={`w-full px-12 py-3 bg-white/5 border border-white/16 rounded-xl text-white placeholder:text-[#dfd7fa82] transition focus:outline-none focus:ring-2 focus:ring-[#b096f3]/35 ${errors.email ? 'border-red-400' : ''}`}
+                      className={`w-full px-12 py-3 bg-white/5 border border-white/16 rounded-xl text-white placeholder:text-[#dfd7fa82] transition focus:outline-none focus:ring-2 focus:ring-[#b096f3]/35 ${errors.address ? 'border-red-400' : ''}`}
                     />
                   </div>
-                  {errors.email && <p className="text-red-400 text-sm mt-1 flex items-center gap-1"><AlertCircle size={14} />{errors.email}</p>}
+                  {errors.address && <p className="text-red-400 text-sm mt-1 flex items-center gap-1"><AlertCircle size={14} />{errors.address}</p>}
                 </motion.div>
                 <motion.div className="mb-2" layout>
                   <label className="block text-sm font-medium text-white/90 mb-2">Your Role *</label>
@@ -292,13 +304,13 @@ const WaitlistModal: React.FC<WaitlistModalProps> = ({
                 <motion.div className="mb-1" layout>
                   <label className="block text-sm font-medium text-white/90 mb-2">How will you use XLEOS? *</label>
                   <textarea
-                    value={formData.useCase}
-                    onChange={e => handleInputChange('useCase', e.target.value)}
+                    value={formData.use}
+                    onChange={e => handleInputChange('use', e.target.value)}
                     placeholder="Tell us about your video editing needs and how XLEOS could help..."
                     rows={3}
-                    className={`w-full px-4 py-3 bg-white/5 border border-white/16 rounded-xl text-white placeholder:text-[#dfd7fa82] min-h-[50px] transition focus:outline-none focus:ring-2 focus:ring-[#b096f3]/35 resize-none ${errors.useCase ? 'border-red-400' : ''}`}
+                    className={`w-full px-4 py-3 bg-white/5 border border-white/16 rounded-xl text-white placeholder:text-[#dfd7fa82] min-h-[50px] transition focus:outline-none focus:ring-2 focus:ring-[#b096f3]/35 resize-none ${errors.use ? 'border-red-400' : ''}`}
                   />
-                  {errors.useCase && <p className="text-red-400 text-sm mt-1 flex items-center gap-1"><AlertCircle size={14} />{errors.useCase}</p>}
+                  {errors.use && <p className="text-red-400 text-sm mt-1 flex items-center gap-1"><AlertCircle size={14} />{errors.use}</p>}
                 </motion.div>
                 {/* Soft Info Row */}
                 <motion.div className="bg-white/3 rounded-xl p-4 mb-2 flex flex-col gap-2">
