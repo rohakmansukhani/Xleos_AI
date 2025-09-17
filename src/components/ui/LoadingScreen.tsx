@@ -1,5 +1,5 @@
 'use client';
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Box, Typography } from '@mui/material';
 import { motion } from 'framer-motion';
 import Logo from './Logo';
@@ -9,6 +9,16 @@ interface LoadingScreenProps {
 }
 
 export default function LoadingScreen({ message = "Loading..." }: LoadingScreenProps) {
+  const [isMounted, setIsMounted] = useState(false);
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
+
+  if (!isMounted) {
+    return null; // Prevent hydration mismatch
+  }
+
   return (
     <Box
       sx={{

@@ -24,7 +24,7 @@ export default function PendingApprovalPage() {
 
     if (approvalStatus === 'approved') {
       // Redirect approved users to home
-      toast.success('Your account has been approved!');
+      toast.success('Your account has been approved!', { toastId: 'account-approved' });
       router.push('/');
       return;
     }
@@ -34,9 +34,9 @@ export default function PendingApprovalPage() {
     setIsRefreshing(true);
     try {
       await checkUserStatus();
-      toast.info('Status refreshed');
+      toast.info('Status refreshed', { toastId: 'status-refreshed' });
     } catch (error) {
-      toast.error('Failed to refresh status');
+      toast.error('Failed to refresh status', { toastId: 'refresh-failed' });
     } finally {
       setIsRefreshing(false);
     }

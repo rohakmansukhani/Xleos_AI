@@ -46,19 +46,28 @@ export default function AuthModal({ mode = 'login', onClose }: AuthModalProps) {
   const fetchAuthUrls = async () => {
     try {
       setError(null);
-      const response = mode === 'login' ?
+      console.log('🔄 Fetching auth URLs...');
+
+      const data = mode === 'login' ?
         await authApi.getLoginUrls() :
         await authApi.getSignupUrls();
 
-      if (!response.ok) {
-        throw new Error('Failed to fetch auth URLs');
-      }
+      console.log('✅ Auth URLs received:', data);
 
-      const urls: AuthUrls = await response.json();
-      console.log('Auth URLs received:', urls);
-      setAuthUrls(urls);
+      // Backend returns auth0 URL for all providers
+      const authUrl = data.auth0 || data.google || data.apple || data.email || '';
+
+      setAuthUrls({
+        google_login_url: authUrl,
+        apple_login_url: authUrl,
+        email_login_url: authUrl,
+        google_signup_url: authUrl,
+        apple_signup_url: authUrl,
+        email_signup_url: authUrl
+      });
+
     } catch (error) {
-      console.error('Failed to fetch auth URLs:', error);
+      console.error('❌ Failed to fetch auth URLs:', error);
       setError('Failed to load authentication options. Please try again.');
     }
   };

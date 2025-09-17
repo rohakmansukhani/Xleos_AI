@@ -49,9 +49,9 @@ export default function Logo({ size = 40, animate = false, showText = true }: Lo
         />
       </motion.div>
       {showText && (
-        <Typography 
-          variant="h6" 
-          sx={{ 
+        <Typography
+          variant="h6"
+          sx={{
             color: 'rgba(255, 255, 255, 0.9)',
             fontWeight: 300,
             fontSize: `${size * 0.4}px`,
