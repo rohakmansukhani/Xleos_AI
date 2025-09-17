@@ -1,18 +1,16 @@
 'use client'
-import React from 'react';
-import AuthModal from '@/components/auth/AuthModal';
+import React, { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import LoadingScreen from '@/components/ui/LoadingScreen';
 
+// Redirect to main page since auth is handled there
 export default function SignupPage() {
   const router = useRouter();
 
-  const handleSuccessAction = () => {
-    router.push('/auth/pending');
-  };
+  useEffect(() => {
+    // Redirect to main page which handles auth
+    router.push('/?auth=signup');
+  }, [router]);
 
-  return (
-    <div className="relative min-h-screen w-full bg-gradient-to-tr from-black via-[#12062c] to-[#2e2175]">
-      <AuthModal onSuccessAction={handleSuccessAction} />
-    </div>
-  );
+  return <LoadingScreen message="Redirecting to signup..." />;
 }

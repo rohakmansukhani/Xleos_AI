@@ -1,80 +1,199 @@
 "use client";
 import { useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Loader } from "lucide-react";
+import { Loader2, CheckCircle, XCircle } from "lucide-react";
 import { toast } from "react-toastify";
-import axios from "axios";
-import { setAuthToken, setUserApprovalStatus } from "@/utils/auth";
+import { authApi } from "@/lib/api";
+import { useAuth } from "@/contexts/AuthContext";
+import { useState } from "react";
 
 function CallbackInner() {
   const router = useRouter();
   const params = useSearchParams();
+  const { checkUserStatus } = useAuth();
+  const [status, setStatus] = useState<'processing' | 'success' | 'error'>('processing');
+  const [message, setMessage] = useState('Processing authentication...');
 
   useEffect(() => {
-    const exchangeCode = async () => {
+    const handleCallback = async () => {
       const code = params.get("code");
+      const error = params.get("error");
+      const error_description = params.get("error_description");
+      const callbackStatus = params.get("status");
+
+      // Handle direct status from backend redirect
+      if (callbackStatus) {
+        if (callbackStatus === 'success') {
+          setStatus('success');
+          setMessage('Authentication successful! Welcome to Xleos!');
+          
+          // Refresh user status from backend
+          try {
+            await checkUserStatus();
+            toast.success("Login successful!");
+            setTimeout(() => router.push("/"), 1500);
+          } catch (error) {
+            console.error('Failed to check user status:', error);
+            setTimeout(() => router.push("/"), 2000);
+          }
+        } else {
+          setStatus('error');
+          setMessage('Authentication failed');
+          setTimeout(() => router.push("/"), 3000);
+        }
+        return;
+      }
+
+      // Handle Auth0 errors
+      if (error) {
+        console.error("❌ Auth0 error:", error, error_description);
+        setStatus('error');
+        setMessage(`Authentication failed: ${error_description || error}`);
+        toast.error("Authentication failed");
+        
+        setTimeout(() => {
+          router.push("/");
+        }, 3000);
+        return;
+      }
+
       if (!code) {
-        toast.error("No authorization code received");
-        router.push("/auth/login");
+        console.error("❌ No authorization code received");
+        setStatus('error');
+        setMessage("No authorization code received");
+        toast.error("Authentication failed - no code received");
+        
+        setTimeout(() => {
+          router.push("/");
+        }, 3000);
         return;
       }
 
       try {
-        console.log("Exchanging code for token:", code);
-        console.log("Backend URL:", process.env.NEXT_PUBLIC_BASEURL);
-        
-        // Call your FastAPI backend's GET /auth/callback endpoint
-        const response = await axios.get(
-          `${process.env.NEXT_PUBLIC_BASEURL}/auth/callback`,
-          {
-            params: { code },
-            withCredentials: true, // Important for receiving cookies
-            headers: {
-              'ngrok-skip-browser-warning': 'true', // Skip ngrok browser warning
-              'Accept': 'application/json',
-            },
-          }
-        );
+        setMessage('Exchanging authorization code...');
+        console.log("🔄 Exchanging code for token:", code);
 
-        console.log("Backend response:", response.data);
+        // Call your FastAPI backend's /auth/callback endpoint
+        const response = await authApi.exchangeCode(code);
 
-        if (response.status === 200 && response.data.message === "Login successful") {
-          // The backend sets the access_token as an HttpOnly cookie
-          // We'll create a simple token for frontend auth state management
-          const frontendToken = `AUTH0_${Date.now()}`;
-          setAuthToken(frontendToken);
+        console.log("📊 Backend response status:", response.status);
+
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({}));
+          console.error("❌ Auth callback failed:", response.status, errorData);
           
-          // Set user approval status from backend response or default to true
-          const userApproved = response.data.user?.approved ?? true;
-          setUserApprovalStatus(userApproved);
+          setStatus('error');
+          setMessage(errorData.error || `Authentication failed (${response.status})`);
+          toast.error("Authentication failed");
+          
+          setTimeout(() => {
+            router.push("/");
+          }, 3000);
+          return;
+        }
 
-          toast.success("Login successful!");
-          router.push("/");
-          router.refresh();
+        const data = await response.json();
+        console.log("✅ Backend response:", data);
+
+        if (data.message === "Login successful") {
+          setStatus('success');
+          setMessage('Authentication successful! Checking account status...');
+          
+          // Wait a bit for cookie to be properly set
+          await new Promise(resolve => setTimeout(resolve, 500));
+          
+          // Refresh user status from backend
+          try {
+            await checkUserStatus();
+            console.log("✅ User status checked successfully");
+            
+            setMessage('Welcome to Xleos! Redirecting...');
+            toast.success("Login successful!");
+
+            setTimeout(() => {
+              router.push("/");
+            }, 1500);
+          } catch (error) {
+            console.error('Failed to check user status after login:', error);
+            setMessage('Login successful but failed to check status. Redirecting...');
+            setTimeout(() => {
+              router.push("/");
+            }, 2000);
+          }
         } else {
-          console.error("Unexpected response:", response);
-          toast.error("Login failed - unexpected response");
-          router.push("/auth/login");
+          console.error("❌ Unexpected response:", data);
+          setStatus('error');
+          setMessage("Authentication failed - unexpected response");
+          toast.error("Login failed");
+          
+          setTimeout(() => {
+            router.push("/");
+          }, 3000);
         }
       } catch (error) {
-        console.error("Auth callback error:", error);
-        if (axios.isAxiosError(error)) {
-          const errorMessage = error.response?.data?.detail || "Login failed";
-          toast.error(errorMessage);
-        } else {
-          toast.error("Login failed");
-        }
-        router.push("/auth/login");
+        console.error("❌ Auth callback error:", error);
+        const errorMessage = error instanceof Error ? error.message : "Authentication failed";
+        
+        setStatus('error');
+        setMessage(errorMessage);
+        toast.error(errorMessage);
+        
+        setTimeout(() => {
+          router.push("/");
+        }, 3000);
       }
     };
 
-    exchangeCode();
-  }, [params, router]);
+    handleCallback();
+  }, [params, router, checkUserStatus]);
+
+  const getIcon = () => {
+    switch (status) {
+      case 'processing':
+        return <Loader2 className="animate-spin w-12 h-12 text-purple-400" />;
+      case 'success':
+        return <CheckCircle className="w-12 h-12 text-green-400" />;
+      case 'error':
+        return <XCircle className="w-12 h-12 text-red-400" />;
+    }
+  };
+
+  const getMessageColor = () => {
+    switch (status) {
+      case 'processing':
+        return 'text-purple-400';
+      case 'success':
+        return 'text-green-400';
+      case 'error':
+        return 'text-red-400';
+    }
+  };
 
   return (
     <div className="text-center flex flex-col items-center">
-      <Loader className="animate-spin" size={48} color="#FA956A" />
-      <span className="ml-4 text-lg text-[#FA956A] mt-2">Processing login...</span>
+      <div className="mb-6">
+        {getIcon()}
+      </div>
+      <h2 className="text-2xl font-bold text-white mb-4">
+        {status === 'processing' && 'Authenticating...'}
+        {status === 'success' && 'Welcome to Xleos!'}
+        {status === 'error' && 'Authentication Failed'}
+      </h2>
+      <p className={`text-lg ${getMessageColor()}`}>
+        {message}
+      </p>
+      {status === 'error' && (
+        <p className="text-white/60 text-sm mt-4">
+          Redirecting to home page in a few seconds...
+        </p>
+      )}
+      {status === 'success' && (
+        <div className="mt-6 p-4 rounded-xl bg-white/5 border border-white/10">
+          <p className="text-white/80 text-sm">
+            Account status verified successfully!
+          </p>
+        </div>
+      )}
     </div>
   );
 }
@@ -82,16 +201,28 @@ function CallbackInner() {
 export default function Callback() {
   return (
     <div className="relative min-h-screen w-full bg-gradient-to-tr from-black via-[#12062c] to-[#2e2175] flex items-center justify-center">
-      <Suspense
-        fallback={
-          <div className="text-center flex flex-col items-center">
-            <Loader className="animate-spin" size={48} color="#FA956A" />
-            <span className="ml-4 text-lg text-[#FA956A] mt-2">Loading...</span>
-          </div>
-        }
-      >
-        <CallbackInner />
-      </Suspense>
+      {/* Background */}
+      <div className="absolute" style={{ top: 0, right: 0, width: "55vw", height: "100vh", zIndex: 1, pointerEvents: "none", display: "flex", alignItems: "center", justifyContent: "center" }} aria-hidden="true">
+        <img src="/cubes.svg" alt="" style={{ width: "100%", height: "100%", objectFit: "contain", opacity: 0.23, userSelect: "none" }} draggable={false} />
+      </div>
+
+      <div className="relative z-10 max-w-md w-full mx-4">
+        <div className="rounded-3xl bg-white/4 border border-white/10 backdrop-blur-xl shadow-xl p-10 relative overflow-hidden">
+          <img src="/elements/flower.png" alt="" className="absolute right-4 top-4 w-16 opacity-10 pointer-events-none blur-[2px]" />
+          
+          <Suspense
+            fallback={
+              <div className="text-center flex flex-col items-center">
+                <Loader2 className="animate-spin w-12 h-12 text-purple-400 mb-6" />
+                <h2 className="text-2xl font-bold text-white mb-4">Loading...</h2>
+                <p className="text-lg text-purple-400">Initializing authentication...</p>
+              </div>
+            }
+          >
+            <CallbackInner />
+          </Suspense>
+        </div>
+      </div>
     </div>
   );
 }

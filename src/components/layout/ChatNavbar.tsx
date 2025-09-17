@@ -3,7 +3,8 @@ import React, { useState, useCallback, memo, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { motion, AnimatePresence, useMotionValue, useSpring } from 'framer-motion'
 import BlobBot from '../ui/BlobBot'
-import { X, User, LogOut, Settings } from 'lucide-react'
+import { User, LogOut } from 'lucide-react'
+import { useAuth } from '@/contexts/AuthContext'
 
 // Glass Logo component (no changes here)
 const GlassLogo: React.FC<{ onClick?: () => void; className?: string }> = memo(({ onClick, className = '' }) => {
@@ -12,6 +13,7 @@ const GlassLogo: React.FC<{ onClick?: () => void; className?: string }> = memo((
   const mouseY = useMotionValue(0)
   const smoothX = useSpring(mouseX, { damping: 25, stiffness: 200 })
   const smoothY = useSpring(mouseY, { damping: 25, stiffness: 200 })
+  
   const handleMouseMove = (e: React.MouseEvent) => {
     const rect = e.currentTarget.getBoundingClientRect()
     const x = (e.clientX - rect.left - rect.width / 2) / rect.width
@@ -19,11 +21,13 @@ const GlassLogo: React.FC<{ onClick?: () => void; className?: string }> = memo((
     mouseX.set(x * 6)
     mouseY.set(y * 6)
   }
+  
   const handleMouseLeave = () => {
     setIsHovering(false)
     mouseX.set(0)
     mouseY.set(0)
   }
+
   return (
     <motion.div
       className={`glass-logo-container relative rounded-full w-11 h-11 flex items-center justify-center cursor-pointer overflow-hidden ${className}`}
@@ -86,24 +90,20 @@ const GlassLogo: React.FC<{ onClick?: () => void; className?: string }> = memo((
 })
 GlassLogo.displayName = 'GlassLogo'
 
+// FIXED: Updated interface to match HomePage usage
 interface ChatNavbarProps {
   onWaitlistClick?: () => void
   onBotClick?: () => void
   onHistoryClick?: () => void
-  onSignOut?: () => void
-  onSettings?: () => void
   className?: string
-  user?: { name?: string; email?: string; image?: string; }
 }
 
 const ProfileDropdown: React.FC<{
-  onSignOut?: () => void,
-  onSettings?: () => void,
-  user?: { name?: string, email?: string, image?: string }
   open: boolean
   setOpen: (v: boolean) => void
-}> = ({ onSignOut, onSettings, user, open, setOpen }) => {
+}> = ({ open, setOpen }) => {
   const ref = useRef<HTMLDivElement>(null)
+  const { user, logout, approvalStatus, chatUsage } = useAuth()
 
   // Close dropdown if clicked outside
   React.useEffect(() => {
@@ -114,10 +114,33 @@ const ProfileDropdown: React.FC<{
     return () => document.removeEventListener("mousedown", cb)
   }, [open, setOpen])
 
-  // Render avatar (customize as needed)
-  const initials = user?.name 
-    ? user.name.split(" ").map(x => x[0]).join("").toUpperCase().slice(0,2)
-    : "U";
+  const handleLogout = async () => {
+    try {
+      await logout();
+      setOpen(false);
+    } catch (error) {
+      console.error('Logout failed:', error);
+      // Force reload anyway
+      window.location.href = '/';
+    }
+  };
+
+  const getApprovalStatusColor = () => {
+    switch (approvalStatus) {
+      case 'approved': return 'text-green-400'
+      case 'pending': return 'text-yellow-400'
+      default: return 'text-gray-400'
+    }
+  }
+
+  const getApprovalStatusText = () => {
+    switch (approvalStatus) {
+      case 'approved': return 'Approved'
+      case 'pending': return 'Pending Approval'
+      default: return 'Unknown Status'
+    }
+  }
+
   return (
     <div ref={ref} className="relative ml-2">
       <motion.button
@@ -129,7 +152,15 @@ const ProfileDropdown: React.FC<{
         title="Account"
       >
         <User className="w-7 h-7 text-white/80" />
+        
+        {/* Approval status indicator */}
+        <div className={`absolute -top-1 -right-1 w-3 h-3 rounded-full ${
+          approvalStatus === 'approved' ? 'bg-green-500' : 
+          approvalStatus === 'pending' ? 'bg-yellow-500' : 
+          'bg-red-500'
+        }`} />
       </motion.button>
+      
       <AnimatePresence>
         {open && (
           <motion.div
@@ -137,21 +168,54 @@ const ProfileDropdown: React.FC<{
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 12, scale: 0.98 }}
             transition={{ type: "spring", stiffness: 360, damping: 30 }}
-            className="absolute right-0 mt-2 min-w-[170px] rounded-2xl bg-gradient-to-br from-[#3f307d]/90 via-[#241b2e]/95 to-[#392560]/85 shadow-2xl border border-white/8 py-2 z-50"
+            className="absolute right-0 mt-2 min-w-[220px] rounded-2xl bg-gradient-to-br from-[#3f307d]/90 via-[#241b2e]/95 to-[#392560]/85 shadow-2xl border border-white/8 py-2 z-50"
           >
-            <div className="px-5 py-2">
-              <div className="text-sm text-white font-semibold truncate">{user?.name || "User"}</div>
-              <div className="text-xs text-[#b5abfa] truncate">{user?.email || ""}</div>
+            {/* User Info */}
+            <div className="px-5 py-3 border-b border-white/10">
+              <div className="text-sm text-white font-semibold truncate">
+                {user?.name || user?.email || "User"}
+              </div>
+              <div className="text-xs text-[#b5abfa] truncate">
+                {user?.email || ""}
+              </div>
+              <div className={`text-xs ${getApprovalStatusColor()} mt-1 flex items-center gap-1`}>
+                <div className={`w-2 h-2 rounded-full ${
+                  approvalStatus === 'approved' ? 'bg-green-500' : 
+                  approvalStatus === 'pending' ? 'bg-yellow-500' : 
+                  'bg-red-500'
+                }`} />
+                {getApprovalStatusText()}
+              </div>
             </div>
+
+            {/* Usage Stats */}
+            <div className="px-5 py-3 border-b border-white/10">
+              <div className="text-xs text-[#b5abfa] mb-2">Script Usage</div>
+              <div className="flex justify-between text-xs">
+                <span className="text-white/70">Used: {chatUsage.used}</span>
+                <span className="text-white/70">
+                  {user?.is_admin ? 'Unlimited' : `${chatUsage.remaining} remaining`}
+                </span>
+              </div>
+              <div className="w-full bg-white/10 rounded-full h-1.5 mt-2 overflow-hidden">
+                <div 
+                  className="h-full bg-gradient-to-r from-[#7c5dfa] to-[#bb80ff] rounded-full transition-all duration-300"
+                  style={{ 
+                    width: user?.is_admin ? '100%' : `${Math.min((chatUsage.used / chatUsage.total) * 100, 100)}%` 
+                  }}
+                />
+              </div>
+              {user?.is_admin && (
+                <div className="text-xs text-purple-300 mt-1">Admin Account</div>
+              )}
+            </div>
+
+            {/* REMOVED: Settings Menu Item */}
+            
+            {/* Sign Out Button */}
             <button
-              className="w-full flex items-center gap-3 px-5 py-2 text-[#b5abfa] hover:bg-[#b18efa18] hover:text-white text-sm transition"
-              onClick={onSettings}
-            >
-              <Settings size={16} /> Settings
-            </button>
-            <button
-              className="w-full flex items-center gap-3 px-5 py-2 text-[#ff78b8] hover:bg-[#aa196533] hover:text-white text-sm transition"
-              onClick={onSignOut}
+              className="w-full flex items-center gap-3 px-5 py-3 text-[#ff78b8] hover:bg-[#aa196533] hover:text-white text-sm transition"
+              onClick={handleLogout}
             >
               <LogOut size={16} /> Sign out
             </button>
@@ -159,26 +223,31 @@ const ProfileDropdown: React.FC<{
         )}
       </AnimatePresence>
     </div>
-  );
-};
+  )
+}
 
 const ChatNavbar: React.FC<ChatNavbarProps> = memo(({
   onWaitlistClick,
   onBotClick,
   onHistoryClick,
-  onSignOut,
-  onSettings,
-  user,
   className = ''
 }) => {
   const router = useRouter()
   const [blobHovered, setBlobHovered] = useState(false)
   const [profileOpen, setProfileOpen] = useState(false)
+  const { user, isAuthenticated, approvalStatus } = useAuth()
 
   const handleLogoClick = useCallback(() => {
     window.location.href = 'https://xleosweb.vercel.app';
-  }, []);
-  const handleBotClick = useCallback(() => { onBotClick?.() }, [onBotClick])
+  }, [])
+
+  const handleBotClick = useCallback(() => { 
+    if (approvalStatus !== 'approved') {
+      // Show approval required message
+      return
+    }
+    onBotClick?.() 
+  }, [onBotClick, approvalStatus])
 
   return (
     <motion.nav
@@ -187,46 +256,50 @@ const ChatNavbar: React.FC<ChatNavbarProps> = memo(({
     >
       <div className="navbar-container flex items-center gap-4 px-6 h-[68px]">
         <GlassLogo onClick={handleLogoClick} />
+        
         <div className="relative">
           <motion.div
-            className="cursor-pointer"
+            className={`cursor-pointer ${approvalStatus !== 'approved' ? 'opacity-50 cursor-not-allowed' : ''}`}
             onClick={handleBotClick}
             onMouseEnter={() => setBlobHovered(true)}
             onMouseLeave={() => setBlobHovered(false)}
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-            title="New Script"
+            whileHover={approvalStatus === 'approved' ? { scale: 1.05 } : {}}
+            whileTap={approvalStatus === 'approved' ? { scale: 0.95 } : {}}
+            title={approvalStatus === 'approved' ? "New Script" : "Approval Required"}
           >
             <BlobBot
               variant="navbar"
               size={48}
               colors={['#4A2178', '#DAA6FF']}
-              mouseFollow={true}
+              mouseFollow={approvalStatus === 'approved'}
               intensity="high"
-              interactive={true}
+              interactive={approvalStatus === 'approved'}
               glowEffect={true}
               className="w-12 h-12"
             />
           </motion.div>
+          
           {blobHovered && (
             <motion.span
-              className="absolute left-1/2 -translate-x-1/2 -top-9 px-4 py-2 rounded-xl bg-purple-700/90 text-white font-medium text-xs shadow-lg z-50"
+              className="absolute left-1/2 -translate-x-1/2 -top-9 px-4 py-2 rounded-xl bg-purple-700/90 text-white font-medium text-xs shadow-lg z-50 whitespace-nowrap"
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: 10 }}
               transition={{ duration: 0.21 }}
               style={{ pointerEvents: "none" }}
             >
-              New Script
+              {approvalStatus === 'approved' ? "New Script" : "Approval Required"}
             </motion.span>
           )}
         </div>
+
         <motion.button
           className="text-white/80 hover:text-white font-medium text-sm cursor-pointer select-none whitespace-nowrap px-2 transition-all"
           onClick={onHistoryClick}
         >
           History
         </motion.button>
+
         <motion.button
           onClick={onWaitlistClick}
           className="bg-gradient-to-r from-[#7c5dfa] to-[#bb80ff] text-white font-semibold px-5 py-2 rounded-lg ml-2 drop-shadow shadow-[0_2px_14px_0_rgba(124,93,250,0.09)]"
@@ -236,14 +309,12 @@ const ChatNavbar: React.FC<ChatNavbarProps> = memo(({
         >
           Join Waitlist
         </motion.button>
-        {/* Profile Dropdown */}
-        {user && (
+
+        {/* Show profile dropdown only when authenticated */}
+        {isAuthenticated && user && (
           <ProfileDropdown
             open={profileOpen}
             setOpen={setProfileOpen}
-            onSignOut={onSignOut}
-            onSettings={onSettings}
-            user={user}
           />
         )}
       </div>

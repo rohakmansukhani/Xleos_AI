@@ -33,14 +33,20 @@ async function appendRowToSheet(
       auth: authClient,
     });
 
+    // Add timestamp and additional metadata
+    const timestamp = new Date().toISOString();
+    const source = 'Xleos AI Studio';
+
     await sheets.spreadsheets.values.append({
       spreadsheetId: SHEET_ID,
-      range: "Sheet1!A:E", 
+      range: "Sheet1!A:G", // Extended to include timestamp and source
       valueInputOption: "RAW",
       requestBody: {
-        values: [[fullName, address, role, company, use]],
+        values: [[fullName, address, role, company, use, timestamp, source]],
       },
     });
+
+    console.log(`✅ Added waitlist entry: ${fullName} (${address})`);
   } catch (error) {
     console.error("Failed to append row to Google Sheets:", error);
     throw new Error("Google Sheets API request failed");
@@ -51,20 +57,72 @@ export async function POST(req: Request) {
   try {
     const { fullName, address, role, company, use } = await req.json();
 
-    if (!fullName || !address || !role || !company || !use) {
+    // Validation
+    if (!fullName || !address || !role || !use) {
       return NextResponse.json(
-        { error: "All fields are required" },
+        { error: "Full name, email, role, and use case are required" },
         { status: 400 }
       );
     }
 
-    await appendRowToSheet(fullName, address, role, company, use);
+    // Email validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(address)) {
+      return NextResponse.json(
+        { error: "Please enter a valid email address" },
+        { status: 400 }
+      );
+    }
+
+    // Content validation
+    if (fullName.length < 2) {
+      return NextResponse.json(
+        { error: "Name must be at least 2 characters" },
+        { status: 400 }
+      );
+    }
+
+    if (use.length < 10) {
+      return NextResponse.json(
+        { error: "Please provide more details about how you plan to use Xleos" },
+        { status: 400 }
+      );
+    }
+
+    await appendRowToSheet(
+      fullName.trim(),
+      address.trim().toLowerCase(),
+      role,
+      company?.trim() || '',
+      use.trim()
+    );
+
     return NextResponse.json(
-      { message: "Row added successfully" },
+      { 
+        message: "Successfully added to waitlist",
+        data: {
+          name: fullName,
+          email: address,
+          timestamp: new Date().toISOString()
+        }
+      },
       { status: 200 }
     );
   } catch (error) {
-    console.error("Error adding row:", error);
-    return NextResponse.json({ error: "Failed to add row" }, { status: 500 });
+    console.error("Error adding to waitlist:", error);
+    
+    if (error instanceof Error) {
+      if (error.message.includes("Google Sheets")) {
+        return NextResponse.json(
+          { error: "Failed to save to waitlist. Please try again." },
+          { status: 500 }
+        );
+      }
+    }
+
+    return NextResponse.json(
+      { error: "Something went wrong. Please try again." },
+      { status: 500 }
+    );
   }
 }

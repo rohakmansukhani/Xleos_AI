@@ -4,70 +4,70 @@ import React, { useState } from 'react';
 import { Box, Typography, IconButton, Button, Rating } from '@mui/material';
 import { motion } from 'framer-motion';
 import { Close, Download, PlayArrow } from '@mui/icons-material';
+import { chatApi } from '@/lib/api';
+import { BackendVideo, BackendLine } from '@/types/auth';
+import { toast } from 'react-toastify';
 
-interface Video {
-  id: string;
-  youtube_video_id: string;
-  title: string;
-  youtube_url: string;
-  thumbnail: string;
-  duration: number;
-  ranking_position: number;
-  video_intelligence_score: number;
-  average_rating: number;
-  total_ratings: number;
-}
+// Helper function to format timestamps
+const formatTime = (seconds: number): string => {
+  const minutes = Math.floor(seconds / 60);
+  const remainingSeconds = seconds % 60;
+  return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
+};
 
-interface Line {
-  id: string;
-  videos: Video[];
-  text: string;
-}
-
+// Backend-compatible interfaces
 interface VideoSelectionPanelProps {
-  line: Line;
-  onCompleteAction: (feedback: { [videoId: string]: { rating: number; comment: string } }) => void;
+  line: BackendLine;
+  submissionId: string;
+  lineIndex: number; // 0-based index for the line
+  onCompleteAction: (feedback: { [videoIndex: number]: { rating: number; comment: string } }) => void;
   onCloseAction: () => void;
 }
 
-export default function VideoSelectionPanel({ line, onCompleteAction, onCloseAction }: VideoSelectionPanelProps) {
-  const [selectedVideos, setSelectedVideos] = useState<Set<string>>(new Set());
-  const [videoRatings, setVideoRatings] = useState<{ [key: string]: number }>({});
-  const [videoComments, setVideoComments] = useState<{ [key: string]: string }>({});
+export default function VideoSelectionPanel({
+  line,
+  submissionId,
+  onCompleteAction,
+  onCloseAction
+}: VideoSelectionPanelProps) {
+  const [selectedVideos, setSelectedVideos] = useState<Set<number>>(new Set());
+  const [videoRatings, setVideoRatings] = useState<{ [videoIndex: number]: number }>({});
+  const [videoComments, setVideoComments] = useState<{ [videoIndex: number]: string }>({});
   const [showFeedbackWarning, setShowFeedbackWarning] = useState(false);
   const [attemptedSubmit, setAttemptedSubmit] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handleVideoSelect = (videoId: string) => {
+  const handleVideoSelect = (videoIndex: number) => {
     setSelectedVideos(prev => {
       const newSet = new Set(prev);
-      if (newSet.has(videoId)) {
-        newSet.delete(videoId);
+      if (newSet.has(videoIndex)) {
+        newSet.delete(videoIndex);
       } else {
-        newSet.add(videoId);
+        newSet.add(videoIndex);
       }
       return newSet;
     });
   };
 
-  const handleRating = async (video: Video, rating: number) => {
-    setVideoRatings(prev => ({ ...prev, [video.id]: rating }));
+  const handleRating = async (videoIndex: number, rating: number) => {
+    setVideoRatings(prev => ({ ...prev, [videoIndex]: rating }));
     if (attemptedSubmit) setShowFeedbackWarning(false);
   };
 
-  const handleCommentChange = (videoId: string, comment: string) => {
-    setVideoComments(prev => ({ ...prev, [videoId]: comment }));
+  const handleCommentChange = (videoIndex: number, comment: string) => {
+    setVideoComments(prev => ({ ...prev, [videoIndex]: comment }));
     if (attemptedSubmit) setShowFeedbackWarning(false);
   };
 
   const validateFeedback = () => {
-    const allVideosRated = line.videos.every(video => videoRatings[video.id] > 0);
-    const allVideosCommented = line.videos.every(video => 
-      videoComments[video.id] && videoComments[video.id].trim().length > 0
+    const allVideosRated = line.videos.every((_, index) => videoRatings[index] > 0);
+    const allVideosCommented = line.videos.every((_, index) => 
+      videoComments[index] && videoComments[index].trim().length > 0
     );
     return allVideosRated && allVideosCommented;
   };
 
-  const handleComplete = () => {
+  const handleComplete = async () => {
     setAttemptedSubmit(true);
     
     if (!validateFeedback()) {
@@ -75,15 +75,41 @@ export default function VideoSelectionPanel({ line, onCompleteAction, onCloseAct
       return;
     }
 
-    const feedback: { [videoId: string]: { rating: number; comment: string } } = {};
-    line.videos.forEach(video => {
-      feedback[video.id] = {
-        rating: videoRatings[video.id],
-        comment: videoComments[video.id]
-      };
-    });
+    setIsSubmitting(true);
+    
+    try {
+      // Submit feedback to backend for each video
+      const feedbackPromises = line.videos.map(async (_, index) => {
+        if (videoRatings[index] && videoComments[index]) {
+          return chatApi.submitFeedback(submissionId, line.line_number, {
+            video_index: index,
+            rating: videoRatings[index],
+            text: videoComments[index]
+          });
+        }
+      });
 
-    onCompleteAction(feedback);
+      await Promise.all(feedbackPromises);
+      
+      // Prepare feedback for parent component
+      const feedback: { [videoIndex: number]: { rating: number; comment: string } } = {};
+      line.videos.forEach((_, index) => {
+        if (videoRatings[index] && videoComments[index]) {
+          feedback[index] = {
+            rating: videoRatings[index],
+            comment: videoComments[index]
+          };
+        }
+      });
+
+      toast.success('Feedback submitted successfully!');
+      onCompleteAction(feedback);
+    } catch (error) {
+      console.error('Failed to submit feedback:', error);
+      toast.error('Failed to submit feedback. Please try again.');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleClose = () => {
@@ -94,18 +120,31 @@ export default function VideoSelectionPanel({ line, onCompleteAction, onCloseAct
     onCloseAction();
   };
 
-  const handleDownload = async (video: Video) => {
-    window.open(video.youtube_url, '_blank');
+  const handleDownload = async (video: BackendVideo) => {
+    window.open(video.video_url, '_blank');
   };
 
-  const handleGetEmbedUrl = async (video: Video) => {
-    window.open(video.youtube_url, '_blank');
+  const handleGetEmbedUrl = async (video: BackendVideo) => {
+    window.open(video.video_url, '_blank');
   };
 
-  const formatDuration = (seconds: number) => {
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
+  const formatDuration = (startTime?: number, endTime?: number) => {
+    if (!startTime || !endTime) return 'N/A';
+    const duration = endTime - startTime;
+    const mins = Math.floor(duration / 60);
+    const secs = Math.floor(duration % 60);
     return `${mins}:${secs.toString().padStart(2, '0')}`;
+  };
+
+  const extractVideoId = (url: string) => {
+    const regex = /(?:youtube\.com\/watch\?v=|youtu\.be\/)([^&\n?#]+)/;
+    const match = url.match(regex);
+    return match ? match[1] : null;
+  };
+
+  const getThumbnail = (videoUrl: string) => {
+    const videoId = extractVideoId(videoUrl);
+    return videoId ? `https://img.youtube.com/vi/${videoId}/maxresdefault.jpg` : '/default-video-thumbnail.jpg';
   };
 
   return (
@@ -160,7 +199,10 @@ export default function VideoSelectionPanel({ line, onCompleteAction, onCloseAct
               Rate AI Stock Suggestions
             </Typography>
             <Typography variant="body2" sx={{ color: 'rgba(210, 191, 255, 0.84)', mb: 1 }}>
-              {line.text}
+              Line {line.line_number}: {line.line_text}
+            </Typography>
+            <Typography variant="caption" sx={{ color: 'rgba(180, 170, 255, 0.7)' }}>
+              Search phrase: "{line.search_phrase}"
             </Typography>
             {showFeedbackWarning && (
               <motion.div
@@ -175,7 +217,7 @@ export default function VideoSelectionPanel({ line, onCompleteAction, onCloseAct
                 }}
               >
                 <Typography variant="body2" sx={{ color: '#fca5a5', fontWeight: 500 }}>
-                  Please rate and comment on all 5 videos to help improve our AI model
+                  Please rate and comment on all videos to help improve our AI model
                 </Typography>
               </motion.div>
             )}
@@ -196,29 +238,29 @@ export default function VideoSelectionPanel({ line, onCompleteAction, onCloseAct
             gridTemplateColumns: 'repeat(auto-fill, minmax(270px, 1fr))',
             gap: 2,
           }}>
-            {line.videos.map((video) => (
+            {line.videos.map((video, videoIndex) => (
               <motion.div
-                key={video.id}
+                key={videoIndex}
                 whileHover={{ scale: 1.022 }}
                 transition={{ type: "spring", stiffness: 360, damping: 28 }}
                 style={{
-                  background: selectedVideos.has(video.id)
+                  background: selectedVideos.has(videoIndex)
                     ? "linear-gradient(90deg,rgba(119,90,255,0.19) 0%,rgba(180,160,240,0.11) 100%)"
                     : "rgba(255,255,255,0.06)",
-                  border: selectedVideos.has(video.id)
+                  border: selectedVideos.has(videoIndex)
                     ? '1.7px solid #af9efa'
                     : '1.2px solid rgba(190,180,230,0.12)',
                   borderRadius: '16px',
                   overflow: 'hidden',
                   cursor: 'pointer'
                 }}
-                onClick={() => handleVideoSelect(video.id)}
+                onClick={() => handleVideoSelect(videoIndex)}
               >
                 {/* Thumbnail */}
                 <Box sx={{
                   width: '100%',
                   height: '170px',
-                  backgroundImage: `url(${video.thumbnail})`,
+                  backgroundImage: `url(${getThumbnail(video.video_url)})`,
                   backgroundSize: 'cover',
                   backgroundPosition: 'center',
                   position: 'relative',
@@ -230,7 +272,14 @@ export default function VideoSelectionPanel({ line, onCompleteAction, onCloseAct
                     background: "rgba(64, 54, 130, 0.64)",
                     color: 'white', px: 1.5, borderRadius: '5px', fontSize: '0.83rem',
                   }}>
-                    {formatDuration(video.duration)}
+                    {formatDuration(video.start_timestamp, video.end_timestamp)}
+                  </Box>
+                  <Box sx={{
+                    position: 'absolute', top: 10, left: 10,
+                    background: "rgba(120, 93, 250, 0.8)",
+                    color: 'white', px: 1, borderRadius: '4px', fontSize: '0.7rem',
+                  }}>
+                    Score: {video.relevance_score}
                   </Box>
                   <IconButton
                     onClick={e => { e.stopPropagation(); handleGetEmbedUrl(video); }}
@@ -252,22 +301,23 @@ export default function VideoSelectionPanel({ line, onCompleteAction, onCloseAct
                     display: '-webkit-box',
                     WebkitLineClamp: 2, WebkitBoxOrient: 'vertical'
                   }}>
-                    {video.title}
+                    {video.description || 'AI-selected video clip'}
                   </Typography>
+                  
                   <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
                     <Typography variant="caption" sx={{ color: '#beabd8' }}>
-                      AI Score: {video.video_intelligence_score.toFixed(1)}
+                      {formatTime(video.start_timestamp)} - {formatTime(video.end_timestamp)}
                     </Typography>
                     <Typography variant="caption" sx={{ color: '#beabd8' }}>
-                      Rank #{video.ranking_position}
+                      Relevance: {video.relevance_score}%
                     </Typography>
                   </Box>
 
                   {/* Rating */}
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1.2 }}>
                     <Rating
-                      value={videoRatings[video.id] || video.average_rating}
-                      onChange={(_, value) => { if (value) handleRating(video, value); }}
+                      value={videoRatings[videoIndex] || 0}
+                      onChange={(_, value) => { if (value) handleRating(videoIndex, value); }}
                       size="small"
                       sx={{
                         '& .MuiRating-iconFilled': { color: '#ffd700' },
@@ -275,7 +325,7 @@ export default function VideoSelectionPanel({ line, onCompleteAction, onCloseAct
                       }}
                     />
                     <Typography variant="caption" sx={{ color: '#b3a5e1' }}>
-                      ({videoRatings[video.id] || 0}/5)
+                      ({videoRatings[videoIndex] || 0}/5)
                     </Typography>
                   </Box>
 
@@ -283,13 +333,13 @@ export default function VideoSelectionPanel({ line, onCompleteAction, onCloseAct
                   <Box sx={{ mb: 1.2 }}>
                     <textarea
                       placeholder="Share your thoughts on this video..."
-                      value={videoComments[video.id] || ''}
-                      onChange={(e) => handleCommentChange(video.id, e.target.value)}
+                      value={videoComments[videoIndex] || ''}
+                      onChange={(e) => handleCommentChange(videoIndex, e.target.value)}
                       style={{
                         width: '100%',
                         minHeight: '60px',
                         backgroundColor: 'rgba(255,255,255,0.08)',
-                        border: attemptedSubmit && !videoComments[video.id]?.trim() 
+                        border: attemptedSubmit && !videoComments[videoIndex]?.trim() 
                           ? '1px solid rgba(239, 68, 68, 0.5)' 
                           : '1px solid rgba(170,150,250,0.23)',
                         borderRadius: '8px',
@@ -305,16 +355,16 @@ export default function VideoSelectionPanel({ line, onCompleteAction, onCloseAct
                         e.target.style.borderColor = 'rgba(170,150,250,0.6)';
                       }}
                       onBlur={(e) => {
-                        e.target.style.borderColor = attemptedSubmit && !videoComments[video.id]?.trim()
+                        e.target.style.borderColor = attemptedSubmit && !videoComments[videoIndex]?.trim()
                           ? 'rgba(239, 68, 68, 0.5)'
                           : 'rgba(170,150,250,0.23)';
                       }}
                     />
-                    {attemptedSubmit && (!videoRatings[video.id] || !videoComments[video.id]?.trim()) && (
+                    {attemptedSubmit && (!videoRatings[videoIndex] || !videoComments[videoIndex]?.trim()) && (
                       <Typography variant="caption" sx={{ color: '#ef4444', fontSize: '12px', mt: 0.5, display: 'block' }}>
-                        {!videoRatings[video.id] && !videoComments[video.id]?.trim() 
+                        {!videoRatings[videoIndex] && !videoComments[videoIndex]?.trim() 
                           ? 'Rating and comment required'
-                          : !videoRatings[video.id] 
+                          : !videoRatings[videoIndex] 
                           ? 'Rating required' 
                           : 'Comment required'}
                       </Typography>
@@ -354,7 +404,7 @@ export default function VideoSelectionPanel({ line, onCompleteAction, onCloseAct
         }}>
           <Box>
             <Typography variant="body2" sx={{ color: '#beb6e7', fontWeight: 400 }}>
-              Feedback provided: {line.videos.filter(v => videoRatings[v.id] && videoComments[v.id]?.trim()).length}/{line.videos.length} videos
+              Feedback provided: {line.videos.filter((_, i) => videoRatings[i] && videoComments[i]?.trim()).length}/{line.videos.length} videos
             </Typography>
             <Typography variant="caption" sx={{ color: '#9ca3af', fontSize: '11px' }}>
               Rate and comment on all videos to continue
@@ -367,7 +417,7 @@ export default function VideoSelectionPanel({ line, onCompleteAction, onCloseAct
             <Button
               onClick={handleComplete}
               variant="contained"
-              disabled={!validateFeedback()}
+              disabled={!validateFeedback() || isSubmitting}
               sx={{
                 background: "linear-gradient(94deg,#7c5dfa 4%,#b998fb 97%)",
                 color: 'white',
@@ -382,7 +432,7 @@ export default function VideoSelectionPanel({ line, onCompleteAction, onCloseAct
                 }
               }}
             >
-              Done
+              {isSubmitting ? 'Submitting...' : 'Done'}
             </Button>
           </Box>
         </Box>
