@@ -70,9 +70,10 @@ export default function AuthModal({ mode = 'login', onClose }: AuthModalProps) {
       return;
     }
 
+    console.log(`🔗 Redirecting to ${provider} URL:`, url);
     setLoading(provider);
     setError(null);
-    
+
     // Add a small delay to show loading state
     setTimeout(() => {
       window.location.href = url;

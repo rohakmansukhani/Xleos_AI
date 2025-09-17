@@ -180,7 +180,7 @@ export interface VideoSuggestion {
 // API RESPONSE TYPES
 // ============================================
 
-export interface ApiResponse<T = unknown> {
+export interface ApiResponse<T = any> {
   success: boolean
   data?: T
   message?: string

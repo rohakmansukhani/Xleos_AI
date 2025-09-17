@@ -3,11 +3,16 @@
 // API Base URL - switches automatically between environments
 export const API_BASE_URL = (() => {
   if (typeof window === 'undefined') {
-    // Server-side rendering
+    // Server-side rendering - always use the backend URL
     return process.env.NEXT_PUBLIC_BASEURL || 'http://localhost:8000'
   }
 
-  // Client-side - use environment variable or default
+  // Client-side - in development, use the proxy (same origin)
+  if (process.env.NODE_ENV === 'development') {
+    return '' // Use relative URLs to leverage Next.js proxy
+  }
+
+  // Production - use environment variable or default
   return process.env.NEXT_PUBLIC_BASEURL || 'http://localhost:8000'
 })()
 

@@ -46,7 +46,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const checkUserStatus = async () => {
     try {
       setIsLoading(true)
-      
+
+      console.log('🔄 Checking user status...')
+
       // Check if user is authenticated via HTTP-only cookie
       const [statusResponse, statsResponse] = await Promise.all([
         authApi.getUserStatus(),
@@ -70,11 +72,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
 
       const statusData: UserStatus = await statusResponse.json()
-      
+
       if (!statsResponse.ok) {
         throw new Error('Failed to get user stats')
       }
-      
+
       const statsData: UserStats = await statsResponse.json()
 
       console.log('✅ User status data:', statusData)

@@ -14,13 +14,27 @@ function CallbackInner() {
   const { checkUserStatus } = useAuth();
   const [status, setStatus] = useState<'processing' | 'success' | 'error'>('processing');
   const [message, setMessage] = useState('Processing authentication...');
+  const [mounted, setMounted] = useState(false);
+
+  // Wait for hydration
+  useEffect(() => {
+    console.log('🔄 Callback: Setting mounted to true');
+    setMounted(true);
+  }, []);
 
   useEffect(() => {
+    // Don't wait for hydration for OAuth processing - codes expire quickly!
+    console.log('🔄 Callback: Processing callback immediately...');
+    console.log('🔍 Current URL:', window.location.href);
+    console.log('🔍 URL Params:', Array.from(params.entries()));
+
     const handleCallback = async () => {
       const code = params.get("code");
       const error = params.get("error");
       const error_description = params.get("error_description");
       const callbackStatus = params.get("status");
+
+      console.log('📝 Callback params:', { code: !!code, error, error_description, callbackStatus });
 
       // Handle direct status from backend redirect
       if (callbackStatus) {
@@ -28,6 +42,26 @@ function CallbackInner() {
           setStatus('success');
           setMessage('Authentication successful! Welcome to Xleos!');
           
+          // Wait for hydration before calling AuthContext methods
+          const waitForHydration = () => {
+            return new Promise<void>((resolve) => {
+              if (mounted) {
+                resolve();
+              } else {
+                const checkMounted = () => {
+                  if (mounted) {
+                    resolve();
+                  } else {
+                    setTimeout(checkMounted, 100);
+                  }
+                };
+                checkMounted();
+              }
+            });
+          };
+
+          await waitForHydration();
+
           // Refresh user status from backend
           try {
             await checkUserStatus();
@@ -97,29 +131,68 @@ function CallbackInner() {
         console.log("✅ Backend response:", data);
 
         if (data.message === "Login successful") {
+          console.log("🎉 Login successful, setting cookies and checking user status...");
           setStatus('success');
           setMessage('Authentication successful! Checking account status...');
-          
-          // Wait a bit for cookie to be properly set
-          await new Promise(resolve => setTimeout(resolve, 500));
-          
-          // Refresh user status from backend
-          try {
-            await checkUserStatus();
-            console.log("✅ User status checked successfully");
-            
-            setMessage('Welcome to Xleos! Redirecting...');
-            toast.success("Login successful!");
 
-            setTimeout(() => {
-              router.push("/");
-            }, 1500);
-          } catch (error) {
-            console.error('Failed to check user status after login:', error);
-            setMessage('Login successful but failed to check status. Redirecting...');
-            setTimeout(() => {
-              router.push("/");
-            }, 2000);
+          // Wait longer for cookie to be properly set and hydration to complete
+          await new Promise(resolve => setTimeout(resolve, 1500));
+
+          // Wait for hydration before calling AuthContext methods
+          const waitForHydration = () => {
+            return new Promise<void>((resolve) => {
+              if (mounted) {
+                resolve();
+              } else {
+                const checkMounted = () => {
+                  if (mounted) {
+                    resolve();
+                  } else {
+                    setTimeout(checkMounted, 100);
+                  }
+                };
+                checkMounted();
+              }
+            });
+          };
+
+          await waitForHydration();
+
+          // Refresh user status from backend with retry logic
+          let retryCount = 0;
+          const maxRetries = 3;
+
+          while (retryCount < maxRetries) {
+            try {
+              console.log(`🔄 Attempt ${retryCount + 1} to check user status`);
+              await checkUserStatus();
+              console.log("✅ User status checked successfully - auth should be set now");
+
+              setMessage('Welcome to Xleos! Redirecting...');
+              toast.success("Login successful!");
+
+              console.log("🏠 Redirecting to home page in 1.5 seconds...");
+              setTimeout(() => {
+                router.push("/");
+              }, 1500);
+              break; // Success, exit retry loop
+            } catch (error) {
+              retryCount++;
+              console.error(`❌ Attempt ${retryCount} failed to check user status:`, error);
+
+              if (retryCount >= maxRetries) {
+                console.error('All retry attempts failed, redirecting anyway');
+                setMessage('Login successful! Redirecting...');
+                toast.success("Login successful!");
+                setTimeout(() => {
+                  router.push("/");
+                }, 2000);
+              } else {
+                // Wait before retry
+                setMessage(`Checking account status... (${retryCount}/${maxRetries})`);
+                await new Promise(resolve => setTimeout(resolve, 1000));
+              }
+            }
           }
         } else {
           console.error("❌ Unexpected response:", data);
