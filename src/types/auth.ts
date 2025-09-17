@@ -176,11 +176,7 @@ export interface VideoSuggestion {
   youtubeVideoId?: string
 }
 
-// ============================================
-// API RESPONSE TYPES
-// ============================================
-
-export interface ApiResponse<T = any> {
+export interface ApiResponse<T = unknown> {
   success: boolean
   data?: T
   message?: string
@@ -203,10 +199,6 @@ export interface AuthCallbackResponse {
   expires_in?: number
   redirect_url?: string
 }
-
-// ============================================
-// FEEDBACK & RATING TYPES
-// ============================================
 
 export interface VideoFeedback {
   video_index: number
@@ -283,9 +275,6 @@ export interface AdminStats {
   average_processing_time: number
 }
 
-// ============================================
-// UTILITY TYPES
-// ============================================
 
 export type LoadingState = 'idle' | 'loading' | 'success' | 'error'
 
@@ -293,7 +282,6 @@ export type AuthState = 'unauthenticated' | 'authenticated' | 'pending' | 'error
 
 export type SubmissionState = 'draft' | 'submitting' | 'processing' | 'completed' | 'failed'
 
-// Generic pagination type for API responses
 export interface PaginatedResponse<T> {
   data: T[]
   total: number
@@ -303,10 +291,6 @@ export interface PaginatedResponse<T> {
   has_next: boolean
   has_prev: boolean
 }
-
-// ============================================
-// CONFIGURATION TYPES
-// ============================================
 
 export interface AppConfig {
   maxScriptLength: number
