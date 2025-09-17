@@ -67,11 +67,6 @@ export interface AuthContextType {
   incrementChatUsage: () => Promise<ChatUsage>
 }
 
-// ============================================
-// BACKEND DATA STRUCTURES
-// ============================================
-
-// Match your exact backend MongoDB schema
 export interface BackendSubmission {
   _id: string
   user_id: string
@@ -137,11 +132,6 @@ export interface WebSocketProgress {
   videos_analyzed?: number
 }
 
-// ============================================
-// FRONTEND COMPATIBILITY TYPES
-// ============================================
-
-// For backward compatibility with existing frontend components
 export interface ScriptSession {
   id: string
   script: string
@@ -224,10 +214,6 @@ export interface SubmissionFeedback {
   submitted_at?: string
 }
 
-// ============================================
-// ERROR HANDLING TYPES
-// ============================================
-
 export interface ApiError {
   message: string
   code?: string
@@ -247,10 +233,6 @@ export interface ProcessingError extends ApiError {
   stage?: string
   retry_possible?: boolean
 }
-
-// ============================================
-// ADMIN & MANAGEMENT TYPES
-// ============================================
 
 export interface AdminUserData {
   email: string
