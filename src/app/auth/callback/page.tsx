@@ -6,6 +6,7 @@ import { toast } from "react-toastify";
 import { authApi } from "@/lib/api";
 import { useAuth } from "@/contexts/AuthContext";
 import { useState } from "react";
+import Image from "next/image"; // <-- Add this import
 
 function CallbackInner() {
   const router = useRouter();
@@ -202,14 +203,49 @@ export default function Callback() {
   return (
     <div className="relative min-h-screen w-full bg-gradient-to-tr from-black via-[#12062c] to-[#2e2175] flex items-center justify-center">
       {/* Background */}
-      <div className="absolute" style={{ top: 0, right: 0, width: "55vw", height: "100vh", zIndex: 1, pointerEvents: "none", display: "flex", alignItems: "center", justifyContent: "center" }} aria-hidden="true">
-        <img src="/cubes.svg" alt="" style={{ width: "100%", height: "100%", objectFit: "contain", opacity: 0.23, userSelect: "none" }} draggable={false} />
+      <div
+        className="absolute"
+        style={{
+          top: 0,
+          right: 0,
+          width: "55vw",
+          height: "100vh",
+          zIndex: 1,
+          pointerEvents: "none",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+        }}
+        aria-hidden="true"
+      >
+        <Image
+          src="/cubes.svg"
+          alt=""
+          width={1000}
+          height={1000}
+          style={{
+            width: "100%",
+            height: "100%",
+            objectFit: "contain",
+            opacity: 0.23,
+            userSelect: "none",
+          }}
+          draggable={false}
+          priority
+        />
       </div>
 
       <div className="relative z-10 max-w-md w-full mx-4">
         <div className="rounded-3xl bg-white/4 border border-white/10 backdrop-blur-xl shadow-xl p-10 relative overflow-hidden">
-          <img src="/elements/flower.png" alt="" className="absolute right-4 top-4 w-16 opacity-10 pointer-events-none blur-[2px]" />
-          
+          <Image
+            src="/elements/flower.png"
+            alt=""
+            width={64}
+            height={64}
+            className="absolute right-4 top-4 w-16 opacity-10 pointer-events-none blur-[2px]"
+            priority
+          />
+
           <Suspense
             fallback={
               <div className="text-center flex flex-col items-center">

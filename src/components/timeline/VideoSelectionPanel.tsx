@@ -202,7 +202,7 @@ export default function VideoSelectionPanel({
               Line {line.line_number}: {line.line_text}
             </Typography>
             <Typography variant="caption" sx={{ color: 'rgba(180, 170, 255, 0.7)' }}>
-              Search phrase: "{line.search_phrase}"
+              Search phrase: &quot;{line.search_phrase}&quot;
             </Typography>
             {showFeedbackWarning && (
               <motion.div

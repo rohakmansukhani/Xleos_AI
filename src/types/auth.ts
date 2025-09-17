@@ -1,9 +1,3 @@
-// types/auth.ts - TypeScript interfaces for authentication and user data
-
-// ============================================
-// USER AUTHENTICATION TYPES
-// ============================================
-
 export interface User {
   email: string
   name: string
@@ -119,11 +113,6 @@ export interface BackendVideo {
   thumbnail_url?: string
   youtube_video_id?: string  // Extracted from URL
 }
-
-// ============================================
-// WEBSOCKET & REAL-TIME TYPES
-// ============================================
-
 export interface WebSocketMessage {
   status: string
   message: string
@@ -191,7 +180,7 @@ export interface VideoSuggestion {
 // API RESPONSE TYPES
 // ============================================
 
-export interface ApiResponse<T = any> {
+export interface ApiResponse<T = unknown> {
   success: boolean
   data?: T
   message?: string

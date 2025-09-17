@@ -188,7 +188,7 @@ export default function LineByLineTimeline({
                   </span>
                   {lineStatuses[idx] !== 'processing' && (
                     <span className="text-xs text-[#c4b8f5]/70 mt-0.5">
-                      {isBonus ? 'Context' : 'Search'}: "{line.search_phrase}"
+                      {isBonus ? 'Context' : 'Search'}: &quot;{line.search_phrase}&quot;
                     </span>
                   )}
                   {/* Display video timestamps if available */}

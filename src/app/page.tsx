@@ -14,6 +14,7 @@ import { useRouter } from 'next/navigation';
 import { chatApi, createWebSocket } from '../lib/api';
 import { toast } from 'react-toastify';
 import { BackendSubmission, BackendLine, WebSocketMessage } from '../types/auth';
+import Image from 'next/image';
 
 export default function HomePage() {
   const router = useRouter();
@@ -102,7 +103,7 @@ export default function HomePage() {
           if (currentSubmission && currentSubmission._id === submissionId) {
             setCurrentSubmission(prev => prev ? {
               ...prev,
-              status: data.status as any,
+              status: data.status as BackendSubmission['status'],
               message: data.message
             } : null);
 
@@ -418,7 +419,15 @@ export default function HomePage() {
     <div className="relative min-h-screen w-full bg-gradient-to-tr from-black via-[#12062c] to-[#2e2175]">
       {/* Background */}
       <div className="absolute" style={{ top: 0, right: 0, width: "55vw", height: "100vh", zIndex: 1, pointerEvents: "none", display: "flex", alignItems: "center", justifyContent: "center" }} aria-hidden="true">
-        <img src="/cubes.svg" alt="" style={{ width: "100%", height: "100%", objectFit: "contain", opacity: 0.23, userSelect: "none" }} draggable={false} />
+        <Image
+          src="/cubes.svg"
+          alt=""
+          width={1000}
+          height={1000}
+          style={{ width: "100%", height: "100%", objectFit: "contain", opacity: 0.23, userSelect: "none" }}
+          draggable={false}
+          priority
+        />
       </div>
 
       <ChatNavbar
@@ -429,8 +438,14 @@ export default function HomePage() {
 
       <main className="flex min-h-[90vh] w-full items-center justify-center pt-36 pb-16 px-0 relative z-10">
         <div className="w-full max-w-7xl flex flex-col rounded-3xl bg-white/4 border border-white/10 backdrop-blur-xl shadow-xl overflow-hidden relative min-h-[650px] mx-4 sm:mx-8 lg:mx-auto">
-          <img src="/elements/flower.png" alt="" className="absolute left-8 bottom-20 w-32 opacity-15 pointer-events-none blur-[3px]" />
-
+          <Image
+            src="/elements/flower.png"
+            alt=""
+            width={128}
+            height={128}
+            className="absolute left-8 bottom-20 w-32 opacity-15 pointer-events-none blur-[3px]"
+            priority
+          />
 
           {/* Content Sections - Updated Logic */}
           {(activeView === 'input' && !processing) && (

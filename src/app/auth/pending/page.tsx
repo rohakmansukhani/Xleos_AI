@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import LoadingScreen from '@/components/ui/LoadingScreen';
 import { toast } from 'react-toastify';
+import Image from 'next/image'; // <-- Add this import
 
 export default function PendingApprovalPage() {
   const router = useRouter();
@@ -59,7 +60,15 @@ export default function PendingApprovalPage() {
     <div className="relative min-h-screen w-full bg-gradient-to-tr from-black via-[#12062c] to-[#2e2175] flex items-center justify-center">
       {/* Background cubes */}
       <div className="absolute" style={{ top: 0, right: 0, width: "55vw", height: "100vh", zIndex: 1, pointerEvents: "none", display: "flex", alignItems: "center", justifyContent: "center" }} aria-hidden="true">
-        <img src="/cubes.svg" alt="" style={{ width: "100%", height: "100%", objectFit: "contain", opacity: 0.23, userSelect: "none" }} draggable={false} />
+        <Image
+          src="/cubes.svg"
+          alt=""
+          width={1000}
+          height={1000}
+          style={{ width: "100%", height: "100%", objectFit: "contain", opacity: 0.23, userSelect: "none" }}
+          draggable={false}
+          priority
+        />
       </div>
 
       <motion.div
@@ -81,7 +90,14 @@ export default function PendingApprovalPage() {
         {/* Main card */}
         <div className="rounded-3xl bg-white/4 border border-white/10 backdrop-blur-xl shadow-xl p-10 text-center relative overflow-hidden">
           {/* Decorative flower */}
-          <img src="/elements/flower.png" alt="" className="absolute right-4 top-4 w-16 opacity-10 pointer-events-none blur-[2px]" />
+          <Image
+            src="/elements/flower.png"
+            alt=""
+            width={64}
+            height={64}
+            className="absolute right-4 top-4 w-16 opacity-10 pointer-events-none blur-[2px]"
+            priority
+          />
           
           {/* Success icon with animation */}
           <motion.div

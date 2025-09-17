@@ -5,6 +5,7 @@ import { motion, AnimatePresence, useMotionValue, useSpring } from 'framer-motio
 import BlobBot from '../ui/BlobBot'
 import { User, LogOut } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
+import Image from 'next/image'
 
 // Glass Logo component (no changes here)
 const GlassLogo: React.FC<{ onClick?: () => void; className?: string }> = memo(({ onClick, className = '' }) => {
@@ -53,12 +54,15 @@ const GlassLogo: React.FC<{ onClick?: () => void; className?: string }> = memo((
       whileTap={{ scale: 0.95 }}
       tabIndex={0}
     >
-      <img
+      <Image
         src="/logo.png"
         alt="Logo"
+        width={28}
+        height={28}
         className="w-7 h-7 object-contain z-10 select-none"
         draggable={false}
         style={{ userSelect: 'none' }}
+        priority
       />
       <motion.div
         className="absolute inset-0 rounded-full pointer-events-none"
