@@ -186,9 +186,26 @@ export const chatApi = {
 
 // WebSocket helper
 export const createWebSocket = (submissionId: string, token?: string) => {
-  const wsUrl = `${WS_BASE_URL}/ws/processing/${submissionId}${token ? `?token=${token}` : ""}`;
+  const wsUrl = `${WS_BASE_URL}/ws/status/${submissionId}${token ? `?token=${token}` : ""}`;
   console.log("🔌 Creating WebSocket connection:", wsUrl);
   return new WebSocket(wsUrl);
+};
+
+// In your connectWebSocket function, add more detailed logging
+const connectWebSocket = (submissionId: string) => {
+  try {
+
+    console.log('🔌 Connecting to WebSocket for submission:', submissionId);
+    
+    const ws = createWebSocket(submissionId);
+    
+    // Add this to see the actual WebSocket URL being used
+    console.log('🔗 WebSocket URL:', ws.url);
+    
+    // ... rest of your code
+  } catch (error) {
+    console.error('Failed to create WebSocket connection:', error);
+  }
 };
 
 export default {

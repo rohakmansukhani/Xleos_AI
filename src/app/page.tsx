@@ -80,55 +80,53 @@ export default function HomePage() {
     }
   }, [isAuthenticated, approvalStatus, authLoading]);
 
-  // Polling function
+  // Updated polling function - status-based
   const pollForResults = async (submissionId: string, attempt = 0) => {
     try {
-      setRealTimeStatus("Checking for results...");
+      setRealTimeStatus('Checking for results...');
       const resultsData = await chatApi.getResults(submissionId);
 
       if (!resultsData || resultsData.error) {
         // Results not ready, poll again after delay
-        if (attempt < 30) {
-          // Limit attempts to avoid infinite polling
-          pollingTimeout.current = setTimeout(() => {
-            pollForResults(submissionId, attempt + 1);
-          }, 2000); // 2 seconds debounce
-        } else {
-          setProcessing(false);
-          setRealTimeStatus("Results not available. Please try again later.");
-        }
-        return;
-      }
-
-      // Check the status field from API response
-      if (resultsData.status === "processing") {
-        // Keep polling until status is 'completed'
-        if (attempt < 30) {
+        if (attempt < 3000) {
           pollingTimeout.current = setTimeout(() => {
             pollForResults(submissionId, attempt + 1);
           }, 2000);
         } else {
           setProcessing(false);
-          setRealTimeStatus("Results not available. Please try again later.");
+          setRealTimeStatus('Results not available. Please try again later.');
         }
         return;
       }
 
-      // If status is 'completed', update state and show results
-      setProcessing(false);
-      setRealTimeStatus("");
+      // Always update submission with latest data from API
       setCurrentSubmission({
         ...resultsData,
-        status: "completed",
+        status: resultsData.status, // Keep actual status from API
         lines: resultsData.lines || [],
       });
-      setActiveView("timeline");
+
+      // Only stop processing and polling when status is "completed"
+      if (resultsData.status === 'completed') {
+        setProcessing(false);
+        setRealTimeStatus('');
+        // activeView is already "timeline" - no need to change
+      } else {
+        // Continue polling if still processing
+        if (attempt < 2000000) {
+          pollingTimeout.current = setTimeout(() => {
+            pollForResults(submissionId, attempt + 1);
+          }, 3000);
+        } else {
+          setProcessing(false);
+          setRealTimeStatus('Processing timeout. Please try again.');
+        }
+      }
     } catch (error: unknown) {
       setProcessing(false);
       const errorMessage =
         typeof error === "object" && error && "message" in error
-          ? (error as { message?: string }).message ||
-            "Failed to fetch results."
+          ? (error as { message?: string }).message || "Failed to fetch results."
           : "Failed to fetch results.";
       setRealTimeStatus(errorMessage);
       console.error("Polling error:", error);
@@ -149,10 +147,10 @@ export default function HomePage() {
 
       console.log("✅ Results fetched:", resultsData);
 
-      // Update current submission with complete results
+      // Update current submission with complete results - keep actual status from API
       const updatedSubmission = {
         ...resultsData,
-        status: "completed",
+        status: resultsData.status, // Don't force "completed"
         lines: resultsData.lines || [],
       };
 
@@ -252,6 +250,7 @@ export default function HomePage() {
 
       // Start polling for results
       pollForResults(submissionData.submission_id);
+
     } catch (error: unknown) {
       setProcessing(false);
       const errorMessage =
@@ -429,7 +428,9 @@ export default function HomePage() {
             priority
           />
 
-          {/* Content Sections - Updated Logic */}
+          {/* Updated Rendering Logic - Status-Based */}
+          
+          {/* Input View - Only when not processing */}
           {activeView === "input" && !processing && (
             <XleosMainChatCard
               onSubmitScript={handleScriptSubmit}
@@ -437,20 +438,17 @@ export default function HomePage() {
             />
           )}
 
-          {/* Show loading only if processing AND no results available yet */}
-          {processing &&
-            (!currentSubmission?.lines ||
-              currentSubmission.lines.length === 0) && (
-              <LoadingScreen
-                message={realTimeStatus || "Processing your script..."}
-              />
-            )}
+          {/* Loading Screen - Show when processing OR status is not completed */}
+          {(processing || (currentSubmission && currentSubmission.status !== "completed")) && (
+            <LoadingScreen
+              message={realTimeStatus || "Processing your script..."}
+            />
+          )}
 
-          {/* Show timeline if we have results OR if submission is completed */}
+          {/* Timeline View - Only show when status is explicitly "completed" */}
           {activeView === "timeline" &&
             currentSubmission &&
-            (currentSubmission.lines?.length > 0 ||
-              currentSubmission.status === "completed") && (
+            currentSubmission.status === "completed" && (
               <LineByLineTimeline
                 submission={currentSubmission}
                 onSelectLine={handleOpenVideoModal}
