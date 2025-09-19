@@ -1,6 +1,6 @@
-'use client'
-import { useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+"use client";
+import { useEffect } from "react";
+import { useRouter } from "next/navigation";
 
 // This page is deprecated - all chat functionality has been moved to the main page (/)
 // Redirect users to the main page for the chat interface
@@ -8,7 +8,7 @@ export default function ChatPage() {
   const router = useRouter();
 
   useEffect(() => {
-    router.push('/');
+    router.push("/");
   }, [router]);
 
   return (

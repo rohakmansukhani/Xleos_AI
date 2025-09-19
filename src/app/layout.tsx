@@ -19,10 +19,16 @@ export const metadata: Metadata = {
   description: "Next-level AI storyboard and stock video curation",
 };
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default function RootLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   return (
     <html lang="en" className={`${geistSans.variable} ${geistMono.variable}`}>
-      <body className={`antialiased bg-gradient-to-br from-[#120624] via-black to-[#2E2175] text-white min-h-screen`}>
+      <body
+        className={`antialiased bg-gradient-to-br from-[#120624] via-black to-[#2E2175] text-white min-h-screen`}
+      >
         <AuthProvider>
           {/* (body class sets glass/dark BG for all pages; text-white for light text) */}
           {children}

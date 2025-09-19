@@ -1,16 +1,17 @@
-'use client'
-import React, { useEffect, useState } from 'react';
-import { motion } from 'framer-motion';
-import { CheckCircle, Mail, Clock, ArrowLeft, RefreshCw } from 'lucide-react';
-import { useRouter } from 'next/navigation';
-import { useAuth } from '@/contexts/AuthContext';
-import LoadingScreen from '@/components/ui/LoadingScreen';
-import { toast } from 'react-toastify';
-import Image from 'next/image'; // <-- Add this import
+"use client";
+import React, { useEffect, useState } from "react";
+import { motion } from "framer-motion";
+import { CheckCircle, Mail, Clock, ArrowLeft, RefreshCw } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { useAuth } from "@/contexts/AuthContext";
+import LoadingScreen from "@/components/ui/LoadingScreen";
+import { toast } from "react-toastify";
+import Image from "next/image"; // <-- Add this import
 
 export default function PendingApprovalPage() {
   const router = useRouter();
-  const { user, isAuthenticated, isLoading, approvalStatus, checkUserStatus } = useAuth();
+  const { user, isAuthenticated, isLoading, approvalStatus, checkUserStatus } =
+    useAuth();
   const [isRefreshing, setIsRefreshing] = useState(false);
 
   useEffect(() => {
@@ -18,14 +19,16 @@ export default function PendingApprovalPage() {
 
     if (!isAuthenticated) {
       // Redirect unauthenticated users to home
-      router.push('/');
+      router.push("/");
       return;
     }
 
-    if (approvalStatus === 'approved') {
+    if (approvalStatus === "approved") {
       // Redirect approved users to home
-      toast.success('Your account has been approved!', { toastId: 'account-approved' });
-      router.push('/');
+      toast.success("Your account has been approved!", {
+        toastId: "account-approved",
+      });
+      router.push("/");
       return;
     }
   }, [isAuthenticated, approvalStatus, isLoading, router]);
@@ -34,16 +37,16 @@ export default function PendingApprovalPage() {
     setIsRefreshing(true);
     try {
       await checkUserStatus();
-      toast.info('Status refreshed', { toastId: 'status-refreshed' });
+      toast.info("Status refreshed", { toastId: "status-refreshed" });
     } catch (error) {
-      toast.error('Failed to refresh status', { toastId: 'refresh-failed' });
+      toast.error("Failed to refresh status", { toastId: "refresh-failed" });
     } finally {
       setIsRefreshing(false);
     }
   };
 
   const handleBackToHome = () => {
-    router.push('/');
+    router.push("/");
   };
 
   // Show loading while auth initializes
@@ -52,20 +55,40 @@ export default function PendingApprovalPage() {
   }
 
   // Show loading if user is already approved (redirecting)
-  if (approvalStatus === 'approved') {
+  if (approvalStatus === "approved") {
     return <LoadingScreen message="Account approved! Redirecting..." />;
   }
 
   return (
     <div className="relative min-h-screen w-full bg-gradient-to-tr from-black via-[#12062c] to-[#2e2175] flex items-center justify-center">
       {/* Background cubes */}
-      <div className="absolute" style={{ top: 0, right: 0, width: "55vw", height: "100vh", zIndex: 1, pointerEvents: "none", display: "flex", alignItems: "center", justifyContent: "center" }} aria-hidden="true">
+      <div
+        className="absolute"
+        style={{
+          top: 0,
+          right: 0,
+          width: "55vw",
+          height: "100vh",
+          zIndex: 1,
+          pointerEvents: "none",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+        }}
+        aria-hidden="true"
+      >
         <Image
           src="/cubes.svg"
           alt=""
           width={1000}
           height={1000}
-          style={{ width: "100%", height: "100%", objectFit: "contain", opacity: 0.23, userSelect: "none" }}
+          style={{
+            width: "100%",
+            height: "100%",
+            objectFit: "contain",
+            opacity: 0.23,
+            userSelect: "none",
+          }}
           draggable={false}
           priority
         />
@@ -98,7 +121,7 @@ export default function PendingApprovalPage() {
             className="absolute right-4 top-4 w-16 opacity-10 pointer-events-none blur-[2px]"
             priority
           />
-          
+
           {/* Success icon with animation */}
           <motion.div
             initial={{ scale: 0 }}
@@ -145,7 +168,8 @@ export default function PendingApprovalPage() {
             transition={{ delay: 0.4 }}
             className="text-white/80 text-lg mb-8 leading-relaxed"
           >
-            Your account is pending admin approval. You&apos;ll receive access to our AI studio once approved.
+            Your account is pending admin approval. You&apos;ll receive access
+            to our AI studio once approved.
           </motion.p>
 
           {/* Status indicators */}
@@ -161,22 +185,28 @@ export default function PendingApprovalPage() {
               </div>
               <span className="text-white/90 font-medium">Account Created</span>
             </div>
-            
+
             <div className="flex items-center gap-4 p-4 rounded-xl bg-white/5 border border-white/10">
               <div className="w-8 h-8 rounded-full bg-yellow-500/20 flex items-center justify-center">
                 <Clock className="w-5 h-5 text-yellow-400 animate-pulse" />
               </div>
               <div className="flex-1 text-left">
-                <div className="text-white/90 font-medium">Awaiting Admin Approval</div>
-                <div className="text-white/60 text-sm">Current status: {approvalStatus}</div>
+                <div className="text-white/90 font-medium">
+                  Awaiting Admin Approval
+                </div>
+                <div className="text-white/60 text-sm">
+                  Current status: {approvalStatus}
+                </div>
               </div>
             </div>
-            
+
             <div className="flex items-center gap-4 p-4 rounded-xl bg-white/5 border border-white/10 opacity-60">
               <div className="w-8 h-8 rounded-full bg-gray-500/20 flex items-center justify-center">
                 <Mail className="w-5 h-5 text-gray-400" />
               </div>
-              <span className="text-white/70 font-medium">Email Notification (when approved)</span>
+              <span className="text-white/70 font-medium">
+                Email Notification (when approved)
+              </span>
             </div>
           </motion.div>
 
@@ -193,13 +223,17 @@ export default function PendingApprovalPage() {
               disabled={isRefreshing}
               className="w-full bg-white/10 hover:bg-white/20 border border-white/20 text-white font-medium py-3 px-6 rounded-xl transition-all duration-300 flex items-center justify-center gap-2 disabled:opacity-50"
             >
-              <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
-              {isRefreshing ? 'Checking...' : 'Check Status'}
+              <RefreshCw
+                className={`w-4 h-4 ${isRefreshing ? "animate-spin" : ""}`}
+              />
+              {isRefreshing ? "Checking..." : "Check Status"}
             </button>
 
             {/* Website link */}
             <button
-              onClick={() => window.open('https://xleosweb.vercel.app', '_blank')}
+              onClick={() =>
+                window.open("https://xleosweb.vercel.app", "_blank")
+              }
               className="w-full bg-gradient-to-r from-[#7c5dfa] to-[#bb80ff] text-white font-semibold px-6 py-3 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300"
             >
               Visit Xleos Website

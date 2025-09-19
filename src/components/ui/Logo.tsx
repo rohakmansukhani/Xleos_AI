@@ -1,8 +1,8 @@
-'use client';
-import React from 'react';
-import { Box, Typography } from '@mui/material';
-import { motion } from 'framer-motion';
-import Image from 'next/image';
+"use client";
+import React from "react";
+import { Box, Typography } from "@mui/material";
+import { motion } from "framer-motion";
+import Image from "next/image";
 
 interface LogoProps {
   size?: number;
@@ -10,32 +10,36 @@ interface LogoProps {
   showText?: boolean;
 }
 
-export default function Logo({ size = 40, animate = false, showText = true }: LogoProps) {
+export default function Logo({
+  size = 40,
+  animate = false,
+  showText = true,
+}: LogoProps) {
   const logoVariants = {
     rotating: {
       rotateY: 360,
       transition: {
         duration: 2,
         repeat: Infinity,
-        ease: "linear" as const
-      }
+        ease: "linear" as const,
+      },
     },
     static: {
-      rotateY: 0
-    }
+      rotateY: 0,
+    },
   };
 
   return (
-    <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+    <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
       <motion.div
         variants={logoVariants}
         animate={animate ? "rotating" : "static"}
         style={{
           width: size,
           height: size,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
         }}
       >
         <Image
@@ -44,7 +48,7 @@ export default function Logo({ size = 40, animate = false, showText = true }: Lo
           width={size}
           height={size}
           style={{
-            objectFit: 'contain',
+            objectFit: "contain",
           }}
         />
       </motion.div>
@@ -52,11 +56,11 @@ export default function Logo({ size = 40, animate = false, showText = true }: Lo
         <Typography
           variant="h6"
           sx={{
-            color: 'rgba(255, 255, 255, 0.9)',
+            color: "rgba(255, 255, 255, 0.9)",
             fontWeight: 300,
             fontSize: `${size * 0.4}px`,
-            letterSpacing: '0.5px',
-            display: { xs: 'none', sm: 'block' }
+            letterSpacing: "0.5px",
+            display: { xs: "none", sm: "block" },
           }}
         >
           XLEOS

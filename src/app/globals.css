@@ -64,14 +64,18 @@ body {
 }
 
 @keyframes spinOrbit {
-  100% { transform: rotate(360deg); }
+  100% {
+    transform: rotate(360deg);
+  }
 }
 .orbit {
   position: absolute;
   border-radius: 50%;
   border: 2px dashed #9f80ffcc;
-  width: 110%; height: 110%;
-  left: -5%; top: -5%;
+  width: 110%;
+  height: 110%;
+  left: -5%;
+  top: -5%;
   opacity: 0.3;
   pointer-events: none;
   animation: spinOrbit 16s linear infinite;

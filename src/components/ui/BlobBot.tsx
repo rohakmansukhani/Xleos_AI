@@ -1,7 +1,7 @@
-'use client'
-import React, { useEffect, useState, useRef, useMemo } from 'react'
-import { Canvas, useFrame, useThree } from '@react-three/fiber'
-import { MathUtils, Mesh, ShaderMaterial, Vector3 } from 'three'
+"use client";
+import React, { useEffect, useState, useRef, useMemo } from "react";
+import { Canvas, useFrame, useThree } from "@react-three/fiber";
+import { MathUtils, Mesh, ShaderMaterial, Vector3 } from "three";
 
 const vertexShader: string = `
 uniform float u_intensity;
@@ -98,7 +98,7 @@ void main() {
     vec4 viewPosition = viewMatrix * worldPosition;
     gl_Position = projectionMatrix * viewPosition;
 }
-`
+`;
 
 const fragmentShader: string = `
 uniform float u_intensity;
@@ -158,52 +158,51 @@ void main() {
     
     gl_FragColor = vec4(finalColor, 1.0);
 }
-`
+`;
 
 // Internal mesh component that uses useFrame INSIDE Canvas
 const Blob3DMesh: React.FC<{ isHovering: boolean }> = ({ isHovering }) => {
-  const mesh = useRef<Mesh>(null)
-  const { camera } = useThree()
+  const mesh = useRef<Mesh>(null);
+  const { camera } = useThree();
 
-  const uniforms = useMemo(() => ({
-    u_time: { value: 0 },
-    u_intensity: { value: 0.3 },
-    u_lightPosition: { value: new Vector3(2, 3, 5) }
-  }), [])
+  const uniforms = useMemo(
+    () => ({
+      u_time: { value: 0 },
+      u_intensity: { value: 0.3 },
+      u_lightPosition: { value: new Vector3(2, 3, 5) },
+    }),
+    [],
+  );
 
   useFrame((state) => {
-    const { clock } = state
+    const { clock } = state;
     if (mesh.current) {
-      const material = mesh.current.material as ShaderMaterial
-      material.uniforms.u_time.value = 0.4 * clock.getElapsedTime()
-      
+      const material = mesh.current.material as ShaderMaterial;
+      material.uniforms.u_time.value = 0.4 * clock.getElapsedTime();
+
       // Smooth intensity transition on hover
       material.uniforms.u_intensity.value = MathUtils.lerp(
         material.uniforms.u_intensity.value,
         isHovering ? 0.8 : 0.25,
-        0.03
-      )
-      
+        0.03,
+      );
+
       // Dynamic light position for more realistic lighting
-      const time = clock.getElapsedTime() * 0.5
+      const time = clock.getElapsedTime() * 0.5;
       material.uniforms.u_lightPosition.value.set(
         Math.cos(time) * 3,
         Math.sin(time * 0.7) * 2 + 2,
-        Math.cos(time * 0.5) * 2 + 4
-      )
-      
+        Math.cos(time * 0.5) * 2 + 4,
+      );
+
       // Subtle rotation for more dynamic feel
-      mesh.current.rotation.y += 0.005
-      mesh.current.rotation.x = Math.sin(time * 0.3) * 0.1
+      mesh.current.rotation.y += 0.005;
+      mesh.current.rotation.x = Math.sin(time * 0.3) * 0.1;
     }
-  })
+  });
 
   return (
-    <mesh
-      ref={mesh}
-      scale={1.4}
-      position={[0, 0, 0]}
-    >
+    <mesh ref={mesh} scale={1.4} position={[0, 0, 0]}>
       <icosahedronGeometry args={[2, 24]} />
       <shaderMaterial
         vertexShader={vertexShader}
@@ -211,62 +210,62 @@ const Blob3DMesh: React.FC<{ isHovering: boolean }> = ({ isHovering }) => {
         uniforms={uniforms}
       />
     </mesh>
-  )
-}
+  );
+};
 
 interface BlobBotProps {
-  size?: number
-  colors?: string[]
-  mouseFollow?: boolean
-  intensity?: 'low' | 'medium' | 'high'
-  interactive?: boolean
-  glowEffect?: boolean
-  className?: string
-  variant?: 'default' | 'navbar' | 'hero' | 'minimal'
-  onClick?: () => void
-  onHover?: (isHovering: boolean) => void
+  size?: number;
+  colors?: string[];
+  mouseFollow?: boolean;
+  intensity?: "low" | "medium" | "high";
+  interactive?: boolean;
+  glowEffect?: boolean;
+  className?: string;
+  variant?: "default" | "navbar" | "hero" | "minimal";
+  onClick?: () => void;
+  onHover?: (isHovering: boolean) => void;
 }
 
 // Main component that wraps Canvas
 const BlobBot: React.FC<BlobBotProps> = ({
   size = 48,
-  colors = ['#F259D4', '#8B2B85'], // Magenta-pink to match button
+  colors = ["#F259D4", "#8B2B85"], // Magenta-pink to match button
   mouseFollow = true,
-  intensity = 'medium',
+  intensity = "medium",
   interactive = true,
   glowEffect = true,
-  className = '',
-  variant = 'default',
+  className = "",
+  variant = "default",
   onClick,
-  onHover
+  onHover,
 }) => {
-  const [mounted, setMounted] = useState(false)
-  const [isHovering, setIsHovering] = useState(false)
-  const containerRef = useRef<HTMLDivElement>(null)
+  const [mounted, setMounted] = useState(false);
+  const [isHovering, setIsHovering] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
 
   // Size configurations
   const variantConfig = {
     default: { containerSize: 48 },
     navbar: { containerSize: 48 },
     hero: { containerSize: 120 },
-    minimal: { containerSize: 24 }
-  }[variant]
+    minimal: { containerSize: 24 },
+  }[variant];
 
-  const finalSize = variantConfig.containerSize
+  const finalSize = variantConfig.containerSize;
 
   useEffect(() => {
-    setMounted(true)
-  }, [])
+    setMounted(true);
+  }, []);
 
   const handleMouseEnter = () => {
-    setIsHovering(true)
-    onHover?.(true)
-  }
+    setIsHovering(true);
+    onHover?.(true);
+  };
 
   const handleMouseLeave = () => {
-    setIsHovering(false)
-    onHover?.(false)
-  }
+    setIsHovering(false);
+    onHover?.(false);
+  };
 
   // SSR fallback with matching gradient
   if (!mounted) {
@@ -276,22 +275,22 @@ const BlobBot: React.FC<BlobBotProps> = ({
         style={{
           width: finalSize,
           height: finalSize,
-          borderRadius: '50%'
+          borderRadius: "50%",
         }}
         suppressHydrationWarning
       >
-        <div 
+        <div
           style={{
-            width: '100%',
-            height: '100%',
-            borderRadius: '50%',
+            width: "100%",
+            height: "100%",
+            borderRadius: "50%",
             background: `radial-gradient(circle at 30% 30%, ${colors[0]} 0%, ${colors[1]} 100%)`,
             opacity: 0.9,
-            boxShadow: `0 0 20px ${colors[1]}40, inset 0 0 20px ${colors[0]}30`
+            boxShadow: `0 0 20px ${colors[1]}40, inset 0 0 20px ${colors[0]}30`,
           }}
         />
       </div>
-    )
+    );
   }
 
   return (
@@ -301,9 +300,9 @@ const BlobBot: React.FC<BlobBotProps> = ({
       style={{
         width: finalSize,
         height: finalSize,
-        willChange: interactive ? 'transform' : 'auto',
-        transform: isHovering ? 'scale(1.05)' : 'scale(1)',
-        transition: 'transform 0.3s ease-out'
+        willChange: interactive ? "transform" : "auto",
+        transform: isHovering ? "scale(1.05)" : "scale(1)",
+        transition: "transform 0.3s ease-out",
       }}
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
@@ -318,21 +317,21 @@ const BlobBot: React.FC<BlobBotProps> = ({
           className="absolute inset-0 rounded-full blur-lg opacity-40 pointer-events-none"
           style={{
             background: `radial-gradient(circle, ${colors[0]}80 0%, ${colors[1]}60 40%, transparent 70%)`,
-            transform: 'scale(1.2)',
-            transition: 'opacity 0.3s ease',
-            opacity: isHovering ? 0.6 : 0.3
+            transform: "scale(1.2)",
+            transition: "opacity 0.3s ease",
+            opacity: isHovering ? 0.6 : 0.3,
           }}
         />
       )}
 
       {/* Main 3D Canvas */}
       <div className="relative w-full h-full rounded-full overflow-hidden">
-        <Canvas 
+        <Canvas
           camera={{ position: [0.0, 0.0, 8.0], fov: 45 }}
-          gl={{ 
-            antialias: true, 
+          gl={{
+            antialias: true,
             alpha: true,
-            powerPreference: "high-performance"
+            powerPreference: "high-performance",
           }}
         >
           <ambientLight intensity={0.2} />
@@ -346,16 +345,16 @@ const BlobBot: React.FC<BlobBotProps> = ({
         <div
           className={`absolute inset-0 rounded-full border transition-all duration-300 pointer-events-none ${
             isHovering
-              ? 'border-white/20 bg-white/5'
-              : 'border-white/5 bg-transparent'
+              ? "border-white/20 bg-white/5"
+              : "border-white/5 bg-transparent"
           }`}
           style={{
-            backdropFilter: isHovering ? 'blur(2px)' : 'none',
+            backdropFilter: isHovering ? "blur(2px)" : "none",
           }}
         />
       )}
     </div>
-  )
-}
+  );
+};
 
-export default BlobBot
+export default BlobBot;

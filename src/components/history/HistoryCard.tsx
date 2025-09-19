@@ -1,18 +1,21 @@
-'use client'
+"use client";
 import React, { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { BackendSubmission } from '@/types/auth';
-import { chatApi } from '@/lib/api';
-import { useAuth } from '@/contexts/AuthContext';
-import { toast } from 'react-toastify';
-import { Loader2, Search, Clock, FileText, Star } from 'lucide-react';
+import { BackendSubmission } from "@/types/auth";
+import { chatApi } from "@/lib/api";
+import { useAuth } from "@/contexts/AuthContext";
+import { toast } from "react-toastify";
+import { Loader2, Search, Clock, FileText, Star } from "lucide-react";
 
 interface HistoryCardProps {
   onSelectSession: (submission: BackendSubmission) => void;
   onBack: () => void;
 }
 
-export default function HistoryCard({ onSelectSession, onBack }: HistoryCardProps) {
+export default function HistoryCard({
+  onSelectSession,
+  onBack,
+}: HistoryCardProps) {
   const [search, setSearch] = useState("");
   const [submissions, setSubmissions] = useState<BackendSubmission[]>([]);
   const [loading, setLoading] = useState(true);
@@ -31,13 +34,13 @@ export default function HistoryCard({ onSelectSession, onBack }: HistoryCardProp
 
       // If your backend returns an error field, check here:
       if (!data || data.error) {
-        throw new Error('Failed to fetch submissions');
+        throw new Error("Failed to fetch submissions");
       }
 
       setSubmissions(data || []);
     } catch (error) {
-      console.error('Failed to fetch submissions:', error);
-      toast.error('Failed to load history');
+      console.error("Failed to fetch submissions:", error);
+      toast.error("Failed to load history");
     } finally {
       setLoading(false);
     }
@@ -45,45 +48,66 @@ export default function HistoryCard({ onSelectSession, onBack }: HistoryCardProp
 
   // Filter and sort submissions (most recent first)
   const submissionsToShow = submissions
-    .filter(s => 
-      !search.length || 
-      s.script_text.toLowerCase().includes(search.toLowerCase()) ||
-      s.lines.some(line => line.line_text.toLowerCase().includes(search.toLowerCase()))
+    .filter(
+      (s) =>
+        !search.length ||
+        s.script_text.toLowerCase().includes(search.toLowerCase()) ||
+        s.lines.some((line) =>
+          line.line_text.toLowerCase().includes(search.toLowerCase()),
+        ),
     )
-    .sort((a, b) => new Date(b.submission_timestamp).getTime() - new Date(a.submission_timestamp).getTime());
+    .sort(
+      (a, b) =>
+        new Date(b.submission_timestamp).getTime() -
+        new Date(a.submission_timestamp).getTime(),
+    );
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'completed': return 'text-green-400';
-      case 'processing': return 'text-yellow-400';
-      case 'error': return 'text-red-400';
-      default: return 'text-gray-400';
+      case "completed":
+        return "text-green-400";
+      case "processing":
+        return "text-yellow-400";
+      case "error":
+        return "text-red-400";
+      default:
+        return "text-gray-400";
     }
   };
 
   const getStatusIcon = (status: string) => {
     switch (status) {
-      case 'completed': return '✓';
-      case 'processing': return '⏳';
-      case 'error': return '❌';
-      default: return '❓';
+      case "completed":
+        return "✓";
+      case "processing":
+        return "⏳";
+      case "error":
+        return "❌";
+      default:
+        return "❓";
     }
   };
 
   const getFeedbackStats = (submission: BackendSubmission) => {
-    const totalVideos = submission.lines.reduce((sum, line) => sum + line.videos.length, 0);
-    const ratedVideos = submission.lines.reduce((sum, line) => 
-      sum + line.videos.filter(video => video.feedback.rating !== null).length, 0
+    const totalVideos = submission.lines.reduce(
+      (sum, line) => sum + line.videos.length,
+      0,
+    );
+    const ratedVideos = submission.lines.reduce(
+      (sum, line) =>
+        sum +
+        line.videos.filter((video) => video.feedback.rating !== null).length,
+      0,
     );
     return { total: totalVideos, rated: ratedVideos };
   };
 
   const formatDate = (timestamp: string) => {
-    return new Date(timestamp).toLocaleString('en-US', {
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
+    return new Date(timestamp).toLocaleString("en-US", {
+      month: "short",
+      day: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
     });
   };
 
@@ -123,7 +147,7 @@ export default function HistoryCard({ onSelectSession, onBack }: HistoryCardProp
           <input
             type="text"
             value={search}
-            onChange={e => setSearch(e.target.value)}
+            onChange={(e) => setSearch(e.target.value)}
             placeholder="Search scripts..."
             className="pl-10 pr-4 py-2 rounded-xl bg-white/10 border border-white/10 text-white/85 font-medium shadow text-base focus:outline-none focus:ring-2 focus:ring-purple-500/50"
           />
@@ -133,18 +157,20 @@ export default function HistoryCard({ onSelectSession, onBack }: HistoryCardProp
       {/* Stats */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
         <div className="bg-white/5 rounded-xl p-4 border border-white/10">
-          <div className="text-2xl font-bold text-white mb-1">{submissions.length}</div>
+          <div className="text-2xl font-bold text-white mb-1">
+            {submissions.length}
+          </div>
           <div className="text-sm text-white/60">Total Scripts</div>
         </div>
         <div className="bg-white/5 rounded-xl p-4 border border-white/10">
           <div className="text-2xl font-bold text-green-400 mb-1">
-            {submissions.filter(s => s.status === 'completed').length}
+            {submissions.filter((s) => s.status === "completed").length}
           </div>
           <div className="text-sm text-white/60">Completed</div>
         </div>
         <div className="bg-white/5 rounded-xl p-4 border border-white/10">
           <div className="text-2xl font-bold text-yellow-400 mb-1">
-            {submissions.filter(s => s.status === 'processing').length}
+            {submissions.filter((s) => s.status === "processing").length}
           </div>
           <div className="text-sm text-white/60">Processing</div>
         </div>
@@ -160,10 +186,12 @@ export default function HistoryCard({ onSelectSession, onBack }: HistoryCardProp
         <div className="flex-1 flex flex-col items-center justify-center text-center text-white/60 font-medium gap-4">
           <FileText className="w-16 h-16 text-white/30" />
           <div className="text-2xl mb-2">
-            {search ? 'No scripts found' : 'No scripts yet'}
+            {search ? "No scripts found" : "No scripts yet"}
           </div>
           <div className="text-base">
-            {search ? 'Try a different search term.' : 'Submit your first script to get started!'}
+            {search
+              ? "Try a different search term."
+              : "Submit your first script to get started!"}
           </div>
         </div>
       )}
@@ -185,12 +213,14 @@ export default function HistoryCard({ onSelectSession, onBack }: HistoryCardProp
                 <div className="flex items-start justify-between mb-3">
                   <div className="flex-1">
                     <div className="font-bold text-lg text-white/90 line-clamp-2 mb-2">
-                      {submission.script_text.length > 100 
-                        ? `${submission.script_text.substring(0, 100)}...` 
+                      {submission.script_text.length > 100
+                        ? `${submission.script_text.substring(0, 100)}...`
                         : submission.script_text}
                     </div>
                   </div>
-                  <div className={`flex items-center gap-1 text-sm font-medium ${getStatusColor(submission.status)}`}>
+                  <div
+                    className={`flex items-center gap-1 text-sm font-medium ${getStatusColor(submission.status)}`}
+                  >
                     <span>{getStatusIcon(submission.status)}</span>
                     <span className="capitalize">{submission.status}</span>
                   </div>
@@ -201,11 +231,13 @@ export default function HistoryCard({ onSelectSession, onBack }: HistoryCardProp
                     <FileText className="w-4 h-4" />
                     <span>{submission.lines.length} lines</span>
                   </div>
-                  
-                  {submission.status === 'completed' && (
+
+                  {submission.status === "completed" && (
                     <div className="flex items-center gap-1 text-green-300">
                       <Star className="w-4 h-4" />
-                      <span>{feedbackStats.rated}/{feedbackStats.total} rated</span>
+                      <span>
+                        {feedbackStats.rated}/{feedbackStats.total} rated
+                      </span>
                     </div>
                   )}
 
@@ -215,13 +247,15 @@ export default function HistoryCard({ onSelectSession, onBack }: HistoryCardProp
                   </div>
                 </div>
 
-                {submission.status === 'completed' && (
+                {submission.status === "completed" && (
                   <div className="mt-3 pt-3 border-t border-white/10">
                     <div className="text-xs text-white/50 mb-1">Progress</div>
                     <div className="w-full bg-white/10 rounded-full h-2">
-                      <div 
+                      <div
                         className="h-full bg-gradient-to-r from-purple-500 to-green-400 rounded-full transition-all duration-300"
-                        style={{ width: `${(feedbackStats.rated / feedbackStats.total) * 100}%` }}
+                        style={{
+                          width: `${(feedbackStats.rated / feedbackStats.total) * 100}%`,
+                        }}
                       />
                     </div>
                   </div>

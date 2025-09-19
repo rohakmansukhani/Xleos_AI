@@ -24,7 +24,7 @@ async function appendRowToSheet(
   address: string,
   role: string,
   company: string,
-  use: string
+  use: string,
 ) {
   try {
     const authClient = await getAuth();
@@ -35,7 +35,7 @@ async function appendRowToSheet(
 
     // Add timestamp and additional metadata
     const timestamp = new Date().toISOString();
-    const source = 'Xleos AI Studio';
+    const source = "Xleos AI Studio";
 
     await sheets.spreadsheets.values.append({
       spreadsheetId: SHEET_ID,
@@ -61,7 +61,7 @@ export async function POST(req: Request) {
     if (!fullName || !address || !role || !use) {
       return NextResponse.json(
         { error: "Full name, email, role, and use case are required" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -70,7 +70,7 @@ export async function POST(req: Request) {
     if (!emailRegex.test(address)) {
       return NextResponse.json(
         { error: "Please enter a valid email address" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -78,14 +78,16 @@ export async function POST(req: Request) {
     if (fullName.length < 2) {
       return NextResponse.json(
         { error: "Name must be at least 2 characters" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
     if (use.length < 10) {
       return NextResponse.json(
-        { error: "Please provide more details about how you plan to use Xleos" },
-        { status: 400 }
+        {
+          error: "Please provide more details about how you plan to use Xleos",
+        },
+        { status: 400 },
       );
     }
 
@@ -93,36 +95,36 @@ export async function POST(req: Request) {
       fullName.trim(),
       address.trim().toLowerCase(),
       role,
-      company?.trim() || '',
-      use.trim()
+      company?.trim() || "",
+      use.trim(),
     );
 
     return NextResponse.json(
-      { 
+      {
         message: "Successfully added to waitlist",
         data: {
           name: fullName,
           email: address,
-          timestamp: new Date().toISOString()
-        }
+          timestamp: new Date().toISOString(),
+        },
       },
-      { status: 200 }
+      { status: 200 },
     );
   } catch (error) {
     console.error("Error adding to waitlist:", error);
-    
+
     if (error instanceof Error) {
       if (error.message.includes("Google Sheets")) {
         return NextResponse.json(
           { error: "Failed to save to waitlist. Please try again." },
-          { status: 500 }
+          { status: 500 },
         );
       }
     }
 
     return NextResponse.json(
       { error: "Something went wrong. Please try again." },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

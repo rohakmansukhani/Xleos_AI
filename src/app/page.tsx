@@ -1,19 +1,19 @@
-'use client'
+"use client";
 import React, { useState, useEffect, useRef } from "react";
-import ChatNavbar from '../components/layout/ChatNavbar';
-import XleosMainChatCard from '../components/main/XleosMainChatCard';
-import LineByLineTimeline from '../components/timeline/LineByLineTimeline';
+import ChatNavbar from "../components/layout/ChatNavbar";
+import XleosMainChatCard from "../components/main/XleosMainChatCard";
+import LineByLineTimeline from "../components/timeline/LineByLineTimeline";
 import VideoSelectionPanel from "../components/timeline/VideoSelectionPanel";
-import HistoryCard from '../components/history/HistoryCard';
-import LoadingScreen from '../components/ui/LoadingScreen';
-import WaitlistModal from '../components/main/WaitlistModal';
-import AuthModal from '../components/auth/AuthModal';
-import { useAuth } from '../contexts/AuthContext';
-import ChatLimitNotification from '../components/notifications/ChatLimitNotification';
-import { useRouter } from 'next/navigation';
-import { chatApi } from '../lib/api';
-import { BackendSubmission, BackendLine } from '../types/auth';
-import Image from 'next/image';
+import HistoryCard from "../components/history/HistoryCard";
+import LoadingScreen from "../components/ui/LoadingScreen";
+import WaitlistModal from "../components/main/WaitlistModal";
+import AuthModal from "../components/auth/AuthModal";
+import { useAuth } from "../contexts/AuthContext";
+import ChatLimitNotification from "../components/notifications/ChatLimitNotification";
+import { useRouter } from "next/navigation";
+import { chatApi } from "../lib/api";
+import { BackendSubmission, BackendLine } from "../types/auth";
+import Image from "next/image";
 
 export default function HomePage() {
   const router = useRouter();
@@ -27,25 +27,28 @@ export default function HomePage() {
     chatUsage,
     logout,
     incrementChatUsage,
-    checkUserStatus
+    checkUserStatus,
   } = useAuth();
 
-  const [realTimeStatus, setRealTimeStatus] = useState<string>('');
-  const [activeView, setActiveView] = useState<'input' | 'timeline' | 'history'>('input');
-  const [currentSubmission, setCurrentSubmission] = useState<BackendSubmission | null>(null);
+  const [realTimeStatus, setRealTimeStatus] = useState<string>("");
+  const [activeView, setActiveView] = useState<
+    "input" | "timeline" | "history"
+  >("input");
+  const [currentSubmission, setCurrentSubmission] =
+    useState<BackendSubmission | null>(null);
   const [processing, setProcessing] = useState(false);
   const [showWaitlistModal, setShowWaitlistModal] = useState(false);
   const [showAuthModal, setShowAuthModal] = useState(false);
-  const [authMode, setAuthMode] = useState<'signup' | 'login'>('signup');
+  const [authMode, setAuthMode] = useState<"signup" | "login">("signup");
   const [videoModalState, setVideoModalState] = useState<null | {
     lineIndex: number;
     line: BackendLine;
   }>(null);
-  
+
   // Chat limit and pending approval notifications
   const [showChatLimitModal, setShowChatLimitModal] = useState(false);
   const [showPendingModal, setShowPendingModal] = useState(false);
-  
+
   // Polling state
   const pollingTimeout = useRef<NodeJS.Timeout | null>(null);
 
@@ -62,14 +65,14 @@ export default function HomePage() {
 
     if (!isAuthenticated) {
       setShowAuthModal(true);
-      setAuthMode('signup');
+      setAuthMode("signup");
       setShowPendingModal(false);
       return;
     }
 
     setShowAuthModal(false);
 
-    if (approvalStatus === 'pending') {
+    if (approvalStatus === "pending") {
       setShowPendingModal(true);
       return;
     } else {
@@ -80,24 +83,25 @@ export default function HomePage() {
   // Polling function
   const pollForResults = async (submissionId: string, attempt = 0) => {
     try {
-      setRealTimeStatus('Checking for results...');
+      setRealTimeStatus("Checking for results...");
       const resultsData = await chatApi.getResults(submissionId);
 
       if (!resultsData || resultsData.error) {
         // Results not ready, poll again after delay
-        if (attempt < 30) { // Limit attempts to avoid infinite polling
+        if (attempt < 30) {
+          // Limit attempts to avoid infinite polling
           pollingTimeout.current = setTimeout(() => {
             pollForResults(submissionId, attempt + 1);
           }, 2000); // 2 seconds debounce
         } else {
           setProcessing(false);
-          setRealTimeStatus('Results not available. Please try again later.');
+          setRealTimeStatus("Results not available. Please try again later.");
         }
         return;
       }
 
       // Check the status field from API response
-      if (resultsData.status === 'processing') {
+      if (resultsData.status === "processing") {
         // Keep polling until status is 'completed'
         if (attempt < 30) {
           pollingTimeout.current = setTimeout(() => {
@@ -105,25 +109,26 @@ export default function HomePage() {
           }, 2000);
         } else {
           setProcessing(false);
-          setRealTimeStatus('Results not available. Please try again later.');
+          setRealTimeStatus("Results not available. Please try again later.");
         }
         return;
       }
 
       // If status is 'completed', update state and show results
       setProcessing(false);
-      setRealTimeStatus('');
+      setRealTimeStatus("");
       setCurrentSubmission({
         ...resultsData,
-        status: 'completed',
+        status: "completed",
         lines: resultsData.lines || [],
       });
-      setActiveView('timeline');
+      setActiveView("timeline");
     } catch (error: unknown) {
       setProcessing(false);
       const errorMessage =
         typeof error === "object" && error && "message" in error
-          ? (error as { message?: string }).message || "Failed to fetch results."
+          ? (error as { message?: string }).message ||
+            "Failed to fetch results."
           : "Failed to fetch results.";
       setRealTimeStatus(errorMessage);
       console.error("Polling error:", error);
@@ -133,36 +138,39 @@ export default function HomePage() {
   // Fetch submission results from backend
   const fetchSubmissionResults = async (submissionId: string) => {
     try {
-      console.log('🔍 Fetching results for submission:', submissionId);
-      
+      console.log("🔍 Fetching results for submission:", submissionId);
+
       const resultsData = await chatApi.getResults(submissionId);
 
       if (!resultsData || resultsData.error) {
-        console.log('❌ Failed to fetch results:', resultsData?.error);
+        console.log("❌ Failed to fetch results:", resultsData?.error);
         return null;
       }
 
-      console.log('✅ Results fetched:', resultsData);
-      
+      console.log("✅ Results fetched:", resultsData);
+
       // Update current submission with complete results
       const updatedSubmission = {
         ...resultsData,
-        status: 'completed',
-        lines: resultsData.lines || []
+        status: "completed",
+        lines: resultsData.lines || [],
       };
-      
+
       setCurrentSubmission(updatedSubmission);
-      console.log('✅ Submission updated with results, lines count:', resultsData.lines?.length || 0);
-      
+      console.log(
+        "✅ Submission updated with results, lines count:",
+        resultsData.lines?.length || 0,
+      );
+
       return resultsData;
     } catch (error) {
-      console.error('Failed to fetch submission results:', error);
+      console.error("Failed to fetch submission results:", error);
       return null;
     }
   };
 
   const handleNewSession = () => {
-    if (approvalStatus === 'pending') {
+    if (approvalStatus === "pending") {
       setShowPendingModal(true);
       return;
     }
@@ -173,8 +181,8 @@ export default function HomePage() {
     }
 
     setCurrentSubmission(null);
-    setActiveView('input');
-    setRealTimeStatus('');
+    setActiveView("input");
+    setRealTimeStatus("");
     setProcessing(false);
   };
 
@@ -184,12 +192,12 @@ export default function HomePage() {
       return;
     }
 
-    if (approvalStatus === 'pending') {
+    if (approvalStatus === "pending") {
       setShowPendingModal(true);
       return;
     }
 
-    if (approvalStatus !== 'approved') {
+    if (approvalStatus !== "approved") {
       return;
     }
 
@@ -204,17 +212,24 @@ export default function HomePage() {
 
     try {
       setProcessing(true);
-      setRealTimeStatus('Submitting script...');
+      setRealTimeStatus("Submitting script...");
 
-      if (chatUsage.used === 0 || (chatUsage.remaining <= 2 && !user?.is_admin)) {
+      if (
+        chatUsage.used === 0 ||
+        (chatUsage.remaining <= 2 && !user?.is_admin)
+      ) {
         setShowChatLimitModal(true);
       }
 
       const submissionData = await chatApi.submitScript(script);
 
-      if (!submissionData || submissionData.error || !submissionData.submission_id) {
+      if (
+        !submissionData ||
+        submissionData.error ||
+        !submissionData.submission_id
+      ) {
         setProcessing(false);
-        setRealTimeStatus(submissionData?.message || 'Failed to submit script');
+        setRealTimeStatus(submissionData?.message || "Failed to submit script");
         return;
       }
 
@@ -224,20 +239,19 @@ export default function HomePage() {
 
       const newSubmission: BackendSubmission = {
         _id: submissionData.submission_id,
-        user_id: user?.email || '',
+        user_id: user?.email || "",
         submission_timestamp: new Date().toISOString(),
         script_text: script,
-        status: 'processing',
-        message: 'Processing started',
-        lines: []
+        status: "processing",
+        message: "Processing started",
+        lines: [],
       };
 
       setCurrentSubmission(newSubmission);
-      setActiveView('timeline');
+      setActiveView("timeline");
 
       // Start polling for results
       pollForResults(submissionData.submission_id);
-
     } catch (error: unknown) {
       setProcessing(false);
       const errorMessage =
@@ -253,20 +267,22 @@ export default function HomePage() {
     setVideoModalState({ lineIndex, line });
   };
 
-  const handleVideoFeedback = async (feedback: { [videoIndex: number]: { rating: number; comment: string } }) => {
+  const handleVideoFeedback = async (feedback: {
+    [videoIndex: number]: { rating: number; comment: string };
+  }) => {
     if (!currentSubmission || videoModalState === null) return;
 
     try {
       const updatedSubmission = { ...currentSubmission };
       const line = updatedSubmission.lines[videoModalState.lineIndex];
-      
+
       if (line) {
         Object.entries(feedback).forEach(([videoIndex, fb]) => {
           const vIndex = parseInt(videoIndex);
           if (line.videos[vIndex]) {
             line.videos[vIndex].feedback = {
               rating: fb.rating,
-              text: fb.comment
+              text: fb.comment,
             };
           }
         });
@@ -274,7 +290,7 @@ export default function HomePage() {
 
       setCurrentSubmission(updatedSubmission);
     } catch (error) {
-      console.error('Failed to handle feedback:', error);
+      console.error("Failed to handle feedback:", error);
     } finally {
       setVideoModalState(null);
     }
@@ -286,37 +302,51 @@ export default function HomePage() {
       return;
     }
 
-    if (approvalStatus === 'pending') {
+    if (approvalStatus === "pending") {
       setShowPendingModal(true);
       return;
     }
 
-    setActiveView('history');
+    setActiveView("history");
   };
 
-  const handleSelectHistoricalSession = async (submission: BackendSubmission) => {
-    console.log('📁 [HISTORY] Selected submission:', submission._id, 'Status:', submission.status);
-    
+  const handleSelectHistoricalSession = async (
+    submission: BackendSubmission,
+  ) => {
+    console.log(
+      "📁 [HISTORY] Selected submission:",
+      submission._id,
+      "Status:",
+      submission.status,
+    );
+
     setCurrentSubmission(submission);
-    setActiveView('timeline');
-    
-    if (submission.status === 'completed' && (!submission.lines || submission.lines.length === 0)) {
-      console.log('🔄 [HISTORY] Fetching fresh results for completed submission');
+    setActiveView("timeline");
+
+    if (
+      submission.status === "completed" &&
+      (!submission.lines || submission.lines.length === 0)
+    ) {
+      console.log(
+        "🔄 [HISTORY] Fetching fresh results for completed submission",
+      );
       await fetchSubmissionResults(submission._id);
     }
   };
 
   // Debugging: log key state transitions
   useEffect(() => {
-    console.log('📊 [STATE DEBUG]', {
+    console.log("📊 [STATE DEBUG]", {
       activeView,
       processing,
-      currentSubmission: currentSubmission ? {
-        id: currentSubmission._id,
-        status: currentSubmission.status,
-        linesCount: currentSubmission.lines?.length || 0
-      } : null,
-      realTimeStatus
+      currentSubmission: currentSubmission
+        ? {
+            id: currentSubmission._id,
+            status: currentSubmission.status,
+            linesCount: currentSubmission.lines?.length || 0,
+          }
+        : null,
+      realTimeStatus,
     });
   }, [activeView, processing, currentSubmission, realTimeStatus]);
 
@@ -329,11 +359,11 @@ export default function HomePage() {
   const handleRefreshStatus = async () => {
     try {
       await checkUserStatus();
-      if (approvalStatus === 'approved') {
+      if (approvalStatus === "approved") {
         setShowPendingModal(false);
       }
     } catch (error) {
-      console.error('Failed to refresh status:', error);
+      console.error("Failed to refresh status:", error);
     }
   };
 
@@ -344,24 +374,39 @@ export default function HomePage() {
 
   // Block all content before authentication
   if (!isAuthenticated) {
-    return (
-      <AuthModal
-        mode={authMode}
-        onClose={handleCloseAuth}
-      />
-    );
+    return <AuthModal mode={authMode} onClose={handleCloseAuth} />;
   }
 
   return (
     <div className="relative min-h-screen w-full bg-gradient-to-tr from-black via-[#12062c] to-[#2e2175]">
       {/* Background */}
-      <div className="absolute" style={{ top: 0, right: 0, width: "55vw", height: "100vh", zIndex: 1, pointerEvents: "none", display: "flex", alignItems: "center", justifyContent: "center" }} aria-hidden="true">
+      <div
+        className="absolute"
+        style={{
+          top: 0,
+          right: 0,
+          width: "55vw",
+          height: "100vh",
+          zIndex: 1,
+          pointerEvents: "none",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+        }}
+        aria-hidden="true"
+      >
         <Image
           src="/cubes.svg"
           alt=""
           width={1000}
           height={1000}
-          style={{ width: "100%", height: "100%", objectFit: "contain", opacity: 0.23, userSelect: "none" }}
+          style={{
+            width: "100%",
+            height: "100%",
+            objectFit: "contain",
+            opacity: 0.23,
+            userSelect: "none",
+          }}
           draggable={false}
           priority
         />
@@ -385,30 +430,41 @@ export default function HomePage() {
           />
 
           {/* Content Sections - Updated Logic */}
-          {(activeView === 'input' && !processing) && (
-            <XleosMainChatCard onSubmitScript={handleScriptSubmit} maxLength={1000} />
-          )}
-
-          {/* Show loading only if processing AND no results available yet */}
-          {processing && (!currentSubmission?.lines || currentSubmission.lines.length === 0) && (
-            <LoadingScreen message={realTimeStatus || "Processing your script..."} />
-          )}
-
-          {/* Show timeline if we have results OR if submission is completed */}
-          {(activeView === 'timeline' && currentSubmission && 
-            (currentSubmission.lines?.length > 0 || currentSubmission.status === 'completed')) && (
-            <LineByLineTimeline
-              submission={currentSubmission}
-              onSelectLine={handleOpenVideoModal}
-              onBackToInput={handleNewSession}
-              realTimeStatus={realTimeStatus}
+          {activeView === "input" && !processing && (
+            <XleosMainChatCard
+              onSubmitScript={handleScriptSubmit}
+              maxLength={1000}
             />
           )}
 
-          {(activeView === 'history') && (
+          {/* Show loading only if processing AND no results available yet */}
+          {processing &&
+            (!currentSubmission?.lines ||
+              currentSubmission.lines.length === 0) && (
+              <LoadingScreen
+                message={realTimeStatus || "Processing your script..."}
+              />
+            )}
+
+          {/* Show timeline if we have results OR if submission is completed */}
+          {activeView === "timeline" &&
+            currentSubmission &&
+            (currentSubmission.lines?.length > 0 ||
+              currentSubmission.status === "completed") && (
+              <LineByLineTimeline
+                submission={currentSubmission}
+                onSelectLine={handleOpenVideoModal}
+                onBackToInput={handleNewSession}
+                realTimeStatus={realTimeStatus}
+              />
+            )}
+
+          {activeView === "history" && (
             <HistoryCard
               onSelectSession={handleSelectHistoricalSession}
-              onBack={() => setActiveView(currentSubmission ? 'timeline' : 'input')}
+              onBack={() =>
+                setActiveView(currentSubmission ? "timeline" : "input")
+              }
             />
           )}
         </div>
@@ -427,14 +483,14 @@ export default function HomePage() {
 
       {/* Auth Modal (should never show if authenticated) */}
       {showAuthModal && !isAuthenticated && (
-        <AuthModal
-          mode={authMode}
-          onClose={handleCloseAuth}
-        />
+        <AuthModal mode={authMode} onClose={handleCloseAuth} />
       )}
 
       {/* Waitlist Modal */}
-      <WaitlistModal isOpen={showWaitlistModal} onClose={() => setShowWaitlistModal(false)} />
+      <WaitlistModal
+        isOpen={showWaitlistModal}
+        onClose={() => setShowWaitlistModal(false)}
+      />
 
       {/* Chat Limit & Pending Approval Notification */}
       <ChatLimitNotification
@@ -442,14 +498,14 @@ export default function HomePage() {
         onClose={() => {
           setShowChatLimitModal(false);
           // Only allow closing pending modal if user is approved
-          if (approvalStatus === 'approved') {
+          if (approvalStatus === "approved") {
             setShowPendingModal(false);
           }
         }}
         chatsRemaining={chatUsage.remaining}
         totalChats={chatUsage.total}
         onOpenWaitlist={() => setShowWaitlistModal(true)}
-        isPending={approvalStatus === 'pending'}
+        isPending={approvalStatus === "pending"}
         onRefreshStatus={handleRefreshStatus}
         userEmail={user?.email}
       />
