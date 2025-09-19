@@ -1,5 +1,5 @@
 'use client'
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import ChatNavbar from '../components/layout/ChatNavbar';
 import XleosMainChatCard from '../components/main/XleosMainChatCard';
 import LineByLineTimeline from '../components/timeline/LineByLineTimeline';
@@ -11,9 +11,8 @@ import AuthModal from '../components/auth/AuthModal';
 import { useAuth } from '../contexts/AuthContext';
 import ChatLimitNotification from '../components/notifications/ChatLimitNotification';
 import { useRouter } from 'next/navigation';
-import { chatApi, createWebSocket } from '../lib/api';
-import { toast } from 'react-toastify';
-import { BackendSubmission, BackendLine, WebSocketMessage } from '../types/auth';
+import { chatApi } from '../lib/api';
+import { BackendSubmission, BackendLine } from '../types/auth';
 import Image from 'next/image';
 
 export default function HomePage() {
@@ -28,9 +27,10 @@ export default function HomePage() {
     chatUsage,
     logout,
     incrementChatUsage,
-    checkUserStatus  // For refresh functionality
+    checkUserStatus
   } = useAuth();
 
+  const [realTimeStatus, setRealTimeStatus] = useState<string>('');
   const [activeView, setActiveView] = useState<'input' | 'timeline' | 'history'>('input');
   const [currentSubmission, setCurrentSubmission] = useState<BackendSubmission | null>(null);
   const [processing, setProcessing] = useState(false);
@@ -46,106 +46,87 @@ export default function HomePage() {
   const [showChatLimitModal, setShowChatLimitModal] = useState(false);
   const [showPendingModal, setShowPendingModal] = useState(false);
   
-  // WebSocket state for real-time updates
-  const [websocket, setWebsocket] = useState<WebSocket | null>(null);
-  const [realTimeStatus, setRealTimeStatus] = useState<string>('');
+  // Polling state
+  const pollingTimeout = useRef<NodeJS.Timeout | null>(null);
+
+  // Clean up polling on unmount
+  useEffect(() => {
+    return () => {
+      if (pollingTimeout.current) clearTimeout(pollingTimeout.current);
+    };
+  }, []);
 
   // Handle authentication status
   useEffect(() => {
-    if (authLoading) return; // Wait for auth to initialize
+    if (authLoading) return;
 
     if (!isAuthenticated) {
       setShowAuthModal(true);
       setAuthMode('signup');
-      setShowPendingModal(false); // Close pending modal if user logs out
+      setShowPendingModal(false);
       return;
     }
 
-    // Close auth modal if user becomes authenticated
     setShowAuthModal(false);
 
-    // Handle approval status - Show pending modal for unapproved users
     if (approvalStatus === 'pending') {
-      setShowPendingModal(true); // Show blocking pending modal
+      setShowPendingModal(true);
       return;
     } else {
-      setShowPendingModal(false); // Close pending modal if approved
+      setShowPendingModal(false);
     }
   }, [isAuthenticated, approvalStatus, authLoading]);
 
-  // WebSocket cleanup on unmount
-  useEffect(() => {
-    return () => {
-      if (websocket) {
-        websocket.close();
-      }
-    };
-  }, [websocket]);
-
-  // Connect to WebSocket for real-time updates
-  const connectWebSocket = (submissionId: string) => {
+  // Polling function
+  const pollForResults = async (submissionId: string, attempt = 0) => {
     try {
-      const ws = createWebSocket(submissionId);
+      setRealTimeStatus('Checking for results...');
+      const resultsData = await chatApi.getResults(submissionId);
 
-      ws.onopen = () => {
-        console.log('WebSocket connected for submission:', submissionId);
-      };
-
-      ws.onmessage = (event) => {
-        try {
-          const data: WebSocketMessage = JSON.parse(event.data);
-          console.log('WebSocket message:', data);
-
-          // Update real-time status
-          setRealTimeStatus(data.message || '');
-
-          // Update submission status
-          if (currentSubmission && currentSubmission._id === submissionId) {
-            setCurrentSubmission(prev => prev ? {
-              ...prev,
-              status: data.status as BackendSubmission['status'],
-              message: data.message
-            } : null);
-
-            // If processing is complete, stop loading and fetch results immediately
-            if (data.status === 'completed') {
-              console.log('✅ Processing completed, fetching results...');
-              setProcessing(false);
-              setRealTimeStatus('');
-              
-              // Immediately fetch the complete results and force timeline view
-              fetchSubmissionResults(submissionId).then((results) => {
-                if (results) {
-                  console.log('✅ Results fetched, forcing timeline view');
-                  setActiveView('timeline'); // Force timeline view
-                }
-              });
-              
-            } else if (data.status === 'error') {
-              setProcessing(false);
-              setRealTimeStatus('');
-              console.error('❌ Processing failed:', data.message);
-            }
-          }
-        } catch (error) {
-          console.error('Failed to parse WebSocket message:', error);
+      if (!resultsData || resultsData.error) {
+        // Results not ready, poll again after delay
+        if (attempt < 30) { // Limit attempts to avoid infinite polling
+          pollingTimeout.current = setTimeout(() => {
+            pollForResults(submissionId, attempt + 1);
+          }, 2000); // 2 seconds debounce
+        } else {
+          setProcessing(false);
+          setRealTimeStatus('Results not available. Please try again later.');
         }
-      };
+        return;
+      }
 
-      ws.onerror = (error) => {
-        console.error('WebSocket error:', error);
-      };
+      // Check the status field from API response
+      if (resultsData.status === 'processing') {
+        // Keep polling until status is 'completed'
+        if (attempt < 30) {
+          pollingTimeout.current = setTimeout(() => {
+            pollForResults(submissionId, attempt + 1);
+          }, 2000);
+        } else {
+          setProcessing(false);
+          setRealTimeStatus('Results not available. Please try again later.');
+        }
+        return;
+      }
 
-      ws.onclose = () => {
-        console.log('WebSocket disconnected');
-        setWebsocket(null);
-      };
-
-      setWebsocket(ws);
-      return ws;
-    } catch (error) {
-      console.error('Failed to create WebSocket:', error);
-      return null;
+      // If status is 'completed', update state and show results
+      setProcessing(false);
+      setRealTimeStatus('');
+      setCurrentSubmission({
+        ...resultsData,
+        status: 'completed',
+        lines: resultsData.lines || [],
+      });
+      setActiveView('timeline');
+    } catch (error: unknown) {
+      setProcessing(false);
+      const errorMessage =
+        typeof error === "object" && error && "message" in error
+          ? (error as { message?: string }).message || "Failed to fetch results."
+          : "Failed to fetch results.";
+      setRealTimeStatus(errorMessage);
+      console.error("Polling error:", error);
     }
   };
 
@@ -154,31 +135,24 @@ export default function HomePage() {
     try {
       console.log('🔍 Fetching results for submission:', submissionId);
       
-      const response = await chatApi.getResults(submissionId);
+      const resultsData = await chatApi.getResults(submissionId);
 
-      if (!response.ok) {
-        if (response.status === 404) {
-          console.log('Results not ready yet for submission:', submissionId);
-          return null;
-        }
-        throw new Error('Failed to fetch results');
+      if (!resultsData || resultsData.error) {
+        console.log('❌ Failed to fetch results:', resultsData?.error);
+        return null;
       }
 
-      const resultsData = await response.json();
       console.log('✅ Results fetched:', resultsData);
       
       // Update current submission with complete results
-      if (currentSubmission && currentSubmission._id === submissionId) {
-        const updatedSubmission = {
-          ...currentSubmission,
-          ...resultsData,
-          status: 'completed', // Ensure status is completed
-          lines: resultsData.lines || []
-        };
-        
-        setCurrentSubmission(updatedSubmission);
-        console.log('✅ Submission updated with results, lines count:', resultsData.lines?.length || 0);
-      }
+      const updatedSubmission = {
+        ...resultsData,
+        status: 'completed',
+        lines: resultsData.lines || []
+      };
+      
+      setCurrentSubmission(updatedSubmission);
+      console.log('✅ Submission updated with results, lines count:', resultsData.lines?.length || 0);
       
       return resultsData;
     } catch (error) {
@@ -188,18 +162,20 @@ export default function HomePage() {
   };
 
   const handleNewSession = () => {
-    // Block if pending approval
     if (approvalStatus === 'pending') {
       setShowPendingModal(true);
       return;
     }
 
+    // Clear any polling timeouts
+    if (pollingTimeout.current) {
+      clearTimeout(pollingTimeout.current);
+    }
+
     setCurrentSubmission(null);
     setActiveView('input');
     setRealTimeStatus('');
-    if (websocket) {
-      websocket.close();
-    }
+    setProcessing(false);
   };
 
   const handleScriptSubmit = async (script: string) => {
@@ -208,71 +184,44 @@ export default function HomePage() {
       return;
     }
 
-    // Block if pending approval
     if (approvalStatus === 'pending') {
       setShowPendingModal(true);
       return;
     }
 
     if (approvalStatus !== 'approved') {
-      return; // REMOVED: toast.error - silent rejection
+      return;
     }
 
-    // Check character limit (800 chars)
-    if (script.length > 800) {
-      return; // REMOVED: toast.error - silent rejection
+    if (script.length > 1000) {
+      return;
     }
 
-    // Check if user has chats remaining
     if (chatUsage.remaining <= 0 && !user?.is_admin) {
       setShowChatLimitModal(true);
       return;
     }
 
     try {
-      // Start processing immediately
       setProcessing(true);
       setRealTimeStatus('Submitting script...');
 
-      // Show non-blocking notification for first chat or remaining chats
       if (chatUsage.used === 0 || (chatUsage.remaining <= 2 && !user?.is_admin)) {
         setShowChatLimitModal(true);
       }
 
-      // Submit script to backend
-      const response = await chatApi.submitScript(script);
+      const submissionData = await chatApi.submitScript(script);
 
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-
-        // Handle specific error codes
-        if (response.status === 400 && errorData.detail?.includes('char_limit_exceeded')) {
-          // REMOVED: toast.error('Script exceeds character limit');
-          setProcessing(false);
-          return;
-        }
-        if (response.status === 403) {
-          if (errorData.detail?.includes('submission_limit_reached')) {
-            // REMOVED: toast.error('Submission limit reached');
-            setShowChatLimitModal(true);
-          } else if (errorData.detail?.includes('not approved')) {
-            setShowPendingModal(true); // Show pending modal instead of toast
-          }
-          setProcessing(false);
-          return;
-        }
-
-        throw new Error(errorData.message || 'Failed to submit script');
+      if (!submissionData || submissionData.error || !submissionData.submission_id) {
+        setProcessing(false);
+        setRealTimeStatus(submissionData?.message || 'Failed to submit script');
+        return;
       }
 
-      const submissionData = await response.json();
-
-      // Increment chat usage after successful submission
       if (!user?.is_admin) {
         await incrementChatUsage();
       }
 
-      // Create initial submission object
       const newSubmission: BackendSubmission = {
         _id: submissionData.submission_id,
         user_id: user?.email || '',
@@ -286,18 +235,17 @@ export default function HomePage() {
       setCurrentSubmission(newSubmission);
       setActiveView('timeline');
 
-      // Connect to WebSocket for real-time updates
-      if (submissionData.submission_id) {
-        connectWebSocket(submissionData.submission_id);
-      }
+      // Start polling for results
+      pollForResults(submissionData.submission_id);
 
-      // REMOVED: toast.success('Script submitted successfully!');
-
-    } catch (error) {
-      console.error('Script submission failed:', error);
-      // REMOVED: toast.error(error instanceof Error ? error.message : 'Failed to submit script');
+    } catch (error: unknown) {
       setProcessing(false);
-      setRealTimeStatus('');
+      const errorMessage =
+        typeof error === "object" && error && "message" in error
+          ? (error as { message?: string }).message
+          : "Failed to submit script";
+      setRealTimeStatus(errorMessage || "Failed to submit script");
+      console.error("Script submission failed:", error);
     }
   };
 
@@ -309,13 +257,10 @@ export default function HomePage() {
     if (!currentSubmission || videoModalState === null) return;
 
     try {
-      // Feedback is already submitted to backend by VideoSelectionPanel
-      // Just update local state to reflect completion
       const updatedSubmission = { ...currentSubmission };
       const line = updatedSubmission.lines[videoModalState.lineIndex];
       
       if (line) {
-        // Mark videos as having feedback (this is handled by the VideoSelectionPanel)
         Object.entries(feedback).forEach(([videoIndex, fb]) => {
           const vIndex = parseInt(videoIndex);
           if (line.videos[vIndex]) {
@@ -328,10 +273,8 @@ export default function HomePage() {
       }
 
       setCurrentSubmission(updatedSubmission);
-      // REMOVED: toast.success('Feedback saved successfully!');
     } catch (error) {
       console.error('Failed to handle feedback:', error);
-      // REMOVED: toast.error('Failed to save feedback');
     } finally {
       setVideoModalState(null);
     }
@@ -343,7 +286,6 @@ export default function HomePage() {
       return;
     }
 
-    // Block if pending approval
     if (approvalStatus === 'pending') {
       setShowPendingModal(true);
       return;
@@ -358,7 +300,6 @@ export default function HomePage() {
     setCurrentSubmission(submission);
     setActiveView('timeline');
     
-    // If submission is completed but has no lines, fetch fresh results
     if (submission.status === 'completed' && (!submission.lines || submission.lines.length === 0)) {
       console.log('🔄 [HISTORY] Fetching fresh results for completed submission');
       await fetchSubmissionResults(submission._id);
@@ -381,22 +322,18 @@ export default function HomePage() {
 
   const handleCloseAuth = () => {
     if (!isAuthenticated) {
-      // If user closes auth modal without authenticating, keep modal open
       setShowAuthModal(true);
     }
   };
 
-  // Handle refresh status for pending approval
   const handleRefreshStatus = async () => {
     try {
       await checkUserStatus();
       if (approvalStatus === 'approved') {
-        setShowPendingModal(false); // Just close the modal silently
+        setShowPendingModal(false);
       }
-      // REMOVED: All toast notifications - silent refresh
     } catch (error) {
       console.error('Failed to refresh status:', error);
-      // Keep only console error - no toast spam
     }
   };
 
@@ -449,7 +386,7 @@ export default function HomePage() {
 
           {/* Content Sections - Updated Logic */}
           {(activeView === 'input' && !processing) && (
-            <XleosMainChatCard onSubmitScript={handleScriptSubmit} />
+            <XleosMainChatCard onSubmitScript={handleScriptSubmit} maxLength={1000} />
           )}
 
           {/* Show loading only if processing AND no results available yet */}

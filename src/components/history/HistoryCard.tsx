@@ -27,13 +27,13 @@ export default function HistoryCard({ onSelectSession, onBack }: HistoryCardProp
   const fetchSubmissions = async () => {
     try {
       setLoading(true);
-      const response = await chatApi.getSubmissions();
-      
-      if (!response.ok) {
+      const data = await chatApi.getSubmissions();
+
+      // If your backend returns an error field, check here:
+      if (!data || data.error) {
         throw new Error('Failed to fetch submissions');
       }
 
-      const data = await response.json();
       setSubmissions(data || []);
     } catch (error) {
       console.error('Failed to fetch submissions:', error);

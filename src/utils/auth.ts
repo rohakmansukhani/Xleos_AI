@@ -1,4 +1,3 @@
-// utils/auth.ts - Authentication utilities for Xleos
 
 export function setAuthToken(token: string) {
   localStorage.setItem("xleos_token", token)
