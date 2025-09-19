@@ -1,12 +1,12 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import { authApi } from '@/lib/api';
 import LoadingScreen from '@/components/ui/LoadingScreen';
 
-export default function AuthCallback() {
+function AuthCallbackContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { checkUserStatus } = useAuth();
@@ -91,5 +91,13 @@ export default function AuthCallback() {
 
   return (
     <LoadingScreen message={message} />
+  );
+}
+
+export default function AuthCallback() {
+  return (
+    <Suspense fallback={<LoadingScreen message="Loading authentication..." />}>
+      <AuthCallbackContent />
+    </Suspense>
   );
 }

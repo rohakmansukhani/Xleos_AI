@@ -22,6 +22,17 @@ interface ApiOptions extends RequestInit {
   headers?: HeadersInit;
 }
 
+interface ScriptSubmissionData {
+  script_text: string;
+  [key: string]: unknown;
+}
+
+interface FeedbackData {
+  rating?: number;
+  comment?: string;
+  [key: string]: unknown;
+}
+
 // Generic API helper function with enhanced cookie handling
 export const apiCall = async (endpoint: string, options: ApiOptions = {}) => {
   const url = `${API_BASE_URL}${endpoint}`
@@ -118,7 +129,7 @@ export const authApi = {
 }
 
 export const scriptApi = {
-  submitScript: (data: any) =>
+  submitScript: (data: ScriptSubmissionData) =>
     apiCall('/api/submit-script', {
       method: 'POST',
       body: JSON.stringify(data),
@@ -126,7 +137,7 @@ export const scriptApi = {
   getResults: (submissionId: string) =>
     apiCall(`/api/results/${submissionId}`),
   getSubmissions: () => apiCall('/api/submissions'),
-  submitFeedback: (submissionId: string, lineNumber: number, data: any) =>
+  submitFeedback: (submissionId: string, lineNumber: number, data: FeedbackData) =>
     apiCall(`/api/submit-feedback/${submissionId}/${lineNumber}`, {
       method: 'POST',
       body: JSON.stringify(data),
